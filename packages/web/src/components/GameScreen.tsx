@@ -43,9 +43,22 @@ export function GameScreen({ state, actions }: Props) {
 
   return (
     <main className="screen game-screen">
-      <header className="game-header">
-        <span className="logo small">{nl.appName}</span>
+      <header className="game-bar">
         <span className="round">{nl.game.round(state.round, ROUNDS)}</span>
+        <ul className="scores" aria-label={nl.game.scores}>
+          {state.players.map((p, i) => (
+            <li
+              key={p.id}
+              className={i === state.currentPlayerIndex ? 'score-chip current' : 'score-chip'}
+              style={{ borderColor: p.colour }}
+              aria-current={i === state.currentPlayerIndex ? 'true' : undefined}
+            >
+              <span className="avatar">{avatarEmoji(p.avatar)}</span>
+              <span className="name">{p.name}</span>
+              <span className="points">{totals(state.scorecards[i]!).grandTotal}</span>
+            </li>
+          ))}
+        </ul>
         <span className="menu">
           <button type="button" className="button" onClick={() => setOpen({ kind: 'rules' })}>
             {nl.game.rules}
@@ -56,27 +69,11 @@ export function GameScreen({ state, actions }: Props) {
         </span>
       </header>
 
-      <section className="scores" aria-label={nl.game.scores}>
-        {state.players.map((p, i) => (
-          <div
-            key={p.id}
-            className={i === state.currentPlayerIndex ? 'score-chip current' : 'score-chip'}
-            style={{ borderColor: p.colour }}
-            aria-current={i === state.currentPlayerIndex ? 'true' : undefined}
-          >
-            <span className="avatar">{avatarEmoji(p.avatar)}</span>
-            <span className="name">{p.name}</span>
-            <span className="points">{totals(state.scorecards[i]!).grandTotal}</span>
-          </div>
-        ))}
-      </section>
-
-      <h2 className="turn-banner" style={{ backgroundColor: player.colour }}>
-        {avatarEmoji(player.avatar)} {nl.game.turn(player.name)}
-      </h2>
-
       <div className="table">
         <section className="dice-area">
+          <h2 className="turn-banner" style={{ backgroundColor: player.colour }}>
+            {avatarEmoji(player.avatar)} {nl.game.turn(player.name)}
+          </h2>
           <Dice
             dice={state.dice}
             held={state.held}
@@ -103,6 +100,7 @@ export function GameScreen({ state, actions }: Props) {
 
         <section className="card-area">
           <ScoreTable
+            split
             players={[player]}
             scorecards={[card]}
             choose={{

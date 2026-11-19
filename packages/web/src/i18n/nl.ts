@@ -112,6 +112,8 @@ export const nl = {
 
   scorecard: {
     box: 'Vakje',
+    upper: 'Boven',
+    lower: 'Onder',
     upperTotal: 'Boven totaal',
     upperBonus: 'Bonus (63 of meer)',
     bonusProgress: (total: number) => `${total} van 63`,

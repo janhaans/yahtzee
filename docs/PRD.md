@@ -100,7 +100,7 @@ These are what turn a plain dice game into something a 12-year-old wants to play
 | --- | --- | --- |
 | **Themes** | Choose a look for the whole game. Two themes, based on what your daughter loves: *Voetbalstadion* (soccer): green pitch as the game table, dice that look like footballs, stadium lights and a cheering crowd; and *Snoepwinkel* (sweets): pastel candy colours, dice made of sugar cubes or gummy sweets, lollipops and sprinkles everywhere. The theme changes colours, background, dice, sounds and celebrations. | Must (both themes) |
 | **Avatars and colours** | Each player picks a fun avatar and a colour. Soccer avatars (football, goalkeeper glove, trophy, a player in a team shirt) and sweet avatars (cupcake, lollipop, donut, ice cream, gummy bear), plus a few animals. Shown on the scorecard and on the "whose turn" banner. | Must |
-| **Rolling animation** | Dice shake, tumble and bounce with a satisfying rolling sound. Held dice wiggle and get a glowing border. | Must |
+| **3D rolling dice** | Dice roll in 3D with the sound of rolling dice. **Laptop:** real 3D with physics (e.g. three.js with a physics engine): the dice are thrown onto the table, bounce off each other and the edges, and roll out. **Phones:** lighter CSS 3D cubes that spin and land on the right number, so it runs smoothly on every phone, including older ones. The server always decides the numbers; the animation only shows how the dice land on them. Held dice stay in place, wiggle and get a glowing border. In each theme the dice and sounds match (footballs on grass, sugar cubes or gummy sweets). Sound on iPhones starts after the first tap on the screen. Tapping skips the animation. | Must |
 | **Yahtzee celebration** | Five-of-a-kind triggers a giant "YAHTZEE!!!" banner with a theme celebration: in *Voetbalstadion* a ball flies into the net, the crowd roars "GOOOAL!" and fireworks go off; in *Snoepwinkel* it rains sweets and confetti sprinkles with a happy jingle. | Must |
 | **Funny messages** | Short random reactions in Dutch after events, matching the theme. Soccer: "Wat een knaller!", "Grote straat... recht op het doel af!", "Oei, nul punten. Dat was buitenspel!". Sweets: "Full House! Zoet als een snoepje!", "Mmm, wat een lekkere worp!", "Nul punten... die dobbelstenen hebben te veel suiker op." At least 30 messages per theme, never mean. | Must |
 | **Sound on/off** | Fun sound effects with a big mute button (for quiet moments). | Must |
@@ -249,7 +249,7 @@ The dashboard is a **separate page/app** (its own URL, e.g. `/dashboard`) that r
 | 1 | Project setup and game logic | Repository, tooling, scoring module with full unit tests |
 | 2 | Playable game (basic look) | 2 to 4 players can play a full game with correct scoring |
 | 3 | History storage | API and SQLite database; finished and aborted games saved |
-| 4 | Fun layer | Themes, avatars, animations, sounds, messages, Yahtzee and winner celebrations |
+| 4 | Fun layer | Themes, avatars, 3D rolling dice with sound (physics on the laptop, CSS 3D on phones), animations, sounds, messages, Yahtzee and winner celebrations |
 | 5 | Play from phones | Players join by QR code and play on their own Android phone or iPhone; live updates on the laptop; reconnect after connection loss |
 | 6 | History Dashboard | Game list, filters, game detail; statistics if time allows |
 | 7 | Play-testing with your daughter | Feedback round, fixes and polish |
@@ -284,6 +284,7 @@ The dashboard is a **separate page/app** (its own URL, e.g. `/dashboard`) that r
 - **Computer opponent style:** one computer player per game, without difficulty levels.
 - **Themes:** soccer (*Voetbalstadion*) and sweets (*Snoepwinkel*), both in version 1.
 - **Computer player name:** "Computer".
+- **3D dice (19-11-2026):** dice roll in 3D with rolling sound, built in milestone 4: real 3D with physics on the laptop, CSS 3D cubes on phones.
 
 **Roadmap: version 2 – computer opponent**
 
