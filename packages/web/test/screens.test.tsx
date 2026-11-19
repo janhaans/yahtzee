@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -16,7 +16,7 @@ import { GameScreen } from '../src/components/GameScreen';
 import { ScoreTable } from '../src/components/ScoreTable';
 import { SetupScreen } from '../src/components/SetupScreen';
 import { UnfinishedDialog } from '../src/components/UnfinishedDialog';
-import { fetchRecentNames } from '../src/api';
+import { fetchRecentPlayers } from '../src/api';
 import { formatDateTime } from '../src/format';
 import type { GameSetup } from '@yahtzee/server/looks';
 import type { GameActions } from '../src/useGame';
@@ -147,7 +147,7 @@ describe('SetupScreen', () => {
     const onStart = vi.fn(() =>
       Promise.resolve({ ok: false as const, error: 'duplicate_name' as const }),
     );
-    render(<SetupScreen onStart={onStart} onBack={() => {}} />);
+    render(<SetupScreen onStart={onStart} onBack={() => {}} theme="voetbal" />);
     const [first, second] = screen.getAllByRole('textbox');
     await userEvent.type(first!, 'Emma');
     await userEvent.type(second!, ' emma ');
@@ -158,7 +158,7 @@ describe('SetupScreen', () => {
   });
 
   it('offers 2, 3 or 4 players', async () => {
-    render(<SetupScreen onStart={vi.fn()} onBack={() => {}} />);
+    render(<SetupScreen onStart={vi.fn()} onBack={() => {}} theme="voetbal" />);
     expect(screen.queryByRole('button', { name: '1' })).toBeNull();
     expect(screen.queryByRole('button', { name: '5' })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: '4' }));
@@ -166,10 +166,100 @@ describe('SetupScreen', () => {
   });
 });
 
+function recent(name: string, avatar = 'cat', colour = '#7b4fd6') {
+  return { name, avatar, colour };
+}
+
+/** The last game setup passed to this mock. */
+function lastSetup(onStart: { mock: { calls: unknown[][] } }): GameSetup {
+  return onStart.mock.calls.at(-1)![0] as GameSetup;
+}
+
+async function fillNames(...typed: string[]) {
+  const inputs = screen.getAllByRole('textbox');
+  for (const [i, name] of typed.entries()) await userEvent.type(inputs[i]!, name);
+}
+
+describe('SetupScreen avatars and colours', () => {
+  it('starts with theme avatars and different colours, and sends the theme', async () => {
+    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
+    render(<SetupScreen onStart={onStart} onBack={() => {}} theme="snoep" />);
+    await userEvent.click(screen.getByRole('button', { name: '3' }));
+    await fillNames('Emma', 'Sara', 'Papa');
+    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    const setup = lastSetup(onStart);
+    expect(setup.theme).toBe('snoep');
+    expect(setup.players.map((p) => p.avatar)).toEqual(['cupcake', 'lollipop', 'donut']);
+    expect(new Set(setup.players.map((p) => p.colour)).size).toBe(3);
+  });
+
+  it('lets a player pick an avatar, the same one as someone else is fine', async () => {
+    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
+    render(<SetupScreen onStart={onStart} onBack={() => {}} theme="voetbal" />);
+    for (const seat of [1, 2]) {
+      await userEvent.click(screen.getByRole('button', { name: new RegExp(`speler ${seat}:`) }));
+      const dialog = screen.getByRole('dialog', { name: /Kies je plaatje/ });
+      expect(dialog).toBeVisible();
+      await userEvent.click(screen.getByRole('button', { name: 'Eenhoorn' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+    }
+    await fillNames('Emma', 'Sara');
+    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    expect(lastSetup(onStart).players.map((p) => p.avatar)).toEqual(['unicorn', 'unicorn']);
+  });
+
+  it('only offers colours nobody else has', async () => {
+    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
+    render(<SetupScreen onStart={onStart} onBack={() => {}} theme="voetbal" />);
+    const second = screen.getByRole('group', { name: 'Kleur van speler 2' });
+    // Player 1 has pink, so player 2 cannot take it.
+    expect(within(second).getByRole('button', { name: 'Roze (al gekozen)' })).toBeDisabled();
+    await userEvent.click(within(second).getByRole('button', { name: 'Blauw' }));
+    expect(within(second).getByRole('button', { name: 'Blauw' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    const first = screen.getByRole('group', { name: 'Kleur van speler 1' });
+    expect(within(first).getByRole('button', { name: 'Blauw (al gekozen)' })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole('button', { name: '4' }));
+    await userEvent.click(screen.getByRole('button', { name: '2' }));
+    await userEvent.click(screen.getByRole('button', { name: '3' }));
+    await fillNames('A', 'B', 'C');
+    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    const colours = lastSetup(onStart).players.map((p) => p.colour);
+    expect(colours[1]).toBe('#1f6fd1');
+    expect(new Set(colours).size).toBe(3);
+  });
+
+  it('shuffles the order with "Wie begint?" and keeps each player\'s looks', async () => {
+    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    render(<SetupScreen onStart={onStart} onBack={() => {}} theme="voetbal" />);
+    await fillNames('Emma', 'Sara');
+    await userEvent.click(screen.getByRole('button', { name: /Wie begint/ }));
+    expect(screen.getByRole('button', { name: 'Start!' })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start!' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    expect(lastSetup(onStart).players.map((p) => `${p.name}:${p.avatar}`)).toEqual([
+      'Sara:glove',
+      'Emma:football',
+    ]);
+    vi.restoreAllMocks();
+  });
+});
+
 describe('SetupScreen recent names', () => {
   it('fills the first empty field with a recent name', async () => {
     const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
-    render(<SetupScreen onStart={onStart} onBack={() => {}} recentNames={['Emma', 'Sara']} />);
+    render(
+      <SetupScreen
+        onStart={onStart}
+        onBack={() => {}}
+        theme="voetbal"
+        recentPlayers={[recent('Emma'), recent('Sara')]}
+      />,
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Sara meedoen' }));
     expect(
       screen.getAllByRole('textbox').map((input) => (input as HTMLInputElement).value),
@@ -181,9 +271,41 @@ describe('SetupScreen recent names', () => {
     expect(names(onStart)).toEqual(['Sara', 'Emma']);
   });
 
+  it('brings back the last avatar and colour of a recent player, if still free', async () => {
+    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
+    render(
+      <SetupScreen
+        onStart={onStart}
+        onBack={() => {}}
+        theme="voetbal"
+        recentPlayers={[
+          recent('Emma', 'panda', '#c62828'),
+          recent('Sara', 'fox', '#c62828'),
+          recent('Opa', 'old-avatar', '#123456'),
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Emma meedoen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Sara meedoen' }));
+    await userEvent.click(screen.getByRole('button', { name: '3' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Opa meedoen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    const [emma, sara, opa] = lastSetup(onStart).players;
+    expect(emma).toEqual({ name: 'Emma', avatar: 'panda', colour: '#c62828' });
+    // Red is taken by Emma, so Sara keeps her own colour.
+    expect(sara).toMatchObject({ name: 'Sara', avatar: 'fox', colour: '#2e8b57' });
+    // Looks that no longer exist are not used.
+    expect(opa).toMatchObject({ name: 'Opa', avatar: 'trophy' });
+  });
+
   it('matches names ignoring case and extra spaces, and hides when every field is full', async () => {
     render(
-      <SetupScreen onStart={vi.fn()} onBack={() => {}} recentNames={['Anna Sophie', 'Noor']} />,
+      <SetupScreen
+        onStart={vi.fn()}
+        onBack={() => {}}
+        theme="voetbal"
+        recentPlayers={[recent('Anna Sophie'), recent('Noor')]}
+      />,
     );
     const [first, second] = screen.getAllByRole('textbox');
     await userEvent.type(first!, ' anna   SOPHIE');
@@ -226,21 +348,24 @@ describe('formatDateTime', () => {
   });
 });
 
-describe('fetchRecentNames', () => {
+describe('fetchRecentPlayers', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('returns the names, or nothing when the server cannot answer', async () => {
+  it('returns the players, or nothing when the server cannot answer', async () => {
+    const emma = { id: 'p1', name: 'Emma', avatar: 'cat', colour: '#2e8b57', type: 'human' };
     const reply = (ok: boolean) =>
-      vi.fn(() => Promise.resolve({ ok, json: () => Promise.resolve([{ name: 'Emma' }]) }));
+      vi.fn(() => Promise.resolve({ ok, json: () => Promise.resolve([emma]) }));
     vi.stubGlobal('fetch', reply(true));
-    expect(await fetchRecentNames()).toEqual(['Emma']);
+    expect(await fetchRecentPlayers()).toEqual([
+      { name: 'Emma', avatar: 'cat', colour: '#2e8b57' },
+    ]);
     vi.stubGlobal('fetch', reply(false));
-    expect(await fetchRecentNames()).toEqual([]);
+    expect(await fetchRecentPlayers()).toEqual([]);
     vi.stubGlobal(
       'fetch',
       vi.fn(() => Promise.reject(new Error('offline'))),
     );
-    expect(await fetchRecentNames()).toEqual([]);
+    expect(await fetchRecentPlayers()).toEqual([]);
   });
 });
 

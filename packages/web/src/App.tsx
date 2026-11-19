@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useRecentNames } from './api';
+import { useRecentPlayers } from './api';
 import { EndScreen } from './components/EndScreen';
 import { GameScreen } from './components/GameScreen';
 import { SetupScreen } from './components/SetupScreen';
@@ -12,7 +12,7 @@ import { useGame } from './useGame';
 export function App() {
   const { state, connected, unfinished, saveFailed, actions } = useGame();
   const [view, setView] = useState<'start' | 'setup'>('start');
-  const recentNames = useRecentNames(view === 'setup');
+  const recentPlayers = useRecentPlayers(view === 'setup');
   const status = state?.status;
 
   // Once a game is running, leaving it (finished or stopped) starts from the start screen.
@@ -42,7 +42,8 @@ export function App() {
       <SetupScreen
         onStart={actions.create}
         onBack={() => setView('start')}
-        recentNames={recentNames}
+        theme="voetbal"
+        recentPlayers={recentPlayers}
       />
     );
   } else {

@@ -1,4 +1,5 @@
 import type { BoxId } from '@yahtzee/game-logic';
+import type { AvatarId, Colour } from '@yahtzee/server/looks';
 import type { ActionError } from '@yahtzee/server/protocol';
 
 /** All Dutch user-facing text. More sections are added per milestone. */
@@ -93,7 +94,39 @@ export const nl = {
     back: 'Terug',
     recent: 'Eerder gespeeld:',
     addRecent: (name: string) => `${name} meedoen`,
+    chooseAvatar: (n: number) => `Kies een plaatje voor speler ${n}`,
+    avatarTitle: 'Kies je plaatje',
+    colours: (n: number) => `Kleur van speler ${n}`,
+    colourTaken: (colour: string) => `${colour} (al gekozen)`,
   },
+
+  avatars: {
+    football: 'Voetbal',
+    glove: 'Keepershandschoen',
+    trophy: 'Beker',
+    shirt: 'Voetbalshirt',
+    cupcake: 'Cupcake',
+    lollipop: 'Lolly',
+    donut: 'Donut',
+    icecream: 'IJsje',
+    gummybear: 'Beertje',
+    cat: 'Kat',
+    dog: 'Hond',
+    unicorn: 'Eenhoorn',
+    panda: 'Panda',
+    fox: 'Vos',
+  } satisfies Record<AvatarId, string>,
+
+  colours: {
+    '#e8457c': 'Roze',
+    '#2e8b57': 'Groen',
+    '#7b4fd6': 'Paars',
+    '#d66a00': 'Oranje',
+    '#1f6fd1': 'Blauw',
+    '#c62828': 'Rood',
+    '#00838f': 'Blauwgroen',
+    '#8d5a2b': 'Bruin',
+  } satisfies Record<Colour, string>,
 
   unfinished: {
     title: 'Je hebt een onafgemaakt spel. Verder spelen of stoppen?',
