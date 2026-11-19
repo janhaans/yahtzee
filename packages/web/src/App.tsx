@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
+import { useRecentNames } from './api';
 import { EndScreen } from './components/EndScreen';
 import { GameScreen } from './components/GameScreen';
 import { SetupScreen } from './components/SetupScreen';
 import { StartScreen } from './components/StartScreen';
+import { UnfinishedDialog } from './components/UnfinishedDialog';
 import { nl } from './i18n/nl';
 import { useGame } from './useGame';
 
 /** The game table on the laptop (route `/`). */
 export function App() {
-  const { state, connected, actions } = useGame();
+  const { state, connected, unfinished, saveFailed, actions } = useGame();
   const [view, setView] = useState<'start' | 'setup'>('start');
+  const recentNames = useRecentNames(view === 'setup');
   const status = state?.status;
 
   // Once a game is running, leaving it (finished or stopped) starts from the start screen.
@@ -35,7 +38,13 @@ export function App() {
       />
     );
   } else if (view === 'setup') {
-    screen = <SetupScreen onStart={actions.create} onBack={() => setView('start')} />;
+    screen = (
+      <SetupScreen
+        onStart={actions.create}
+        onBack={() => setView('start')}
+        recentNames={recentNames}
+      />
+    );
   } else {
     screen = <StartScreen onNewGame={() => setView('setup')} />;
   }
@@ -47,7 +56,19 @@ export function App() {
           {nl.errors.disconnected}
         </p>
       )}
+      {saveFailed && (
+        <p className="save-banner" role="status">
+          {nl.history.saveFailed}
+        </p>
+      )}
       {screen}
+      {unfinished && (
+        <UnfinishedDialog
+          game={unfinished}
+          onContinue={() => void actions.resume()}
+          onStop={() => void actions.discardUnfinished()}
+        />
+      )}
     </>
   );
 }

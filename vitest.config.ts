@@ -5,7 +5,8 @@ export default defineConfig({
     include: ['packages/*/test/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',
-      include: ['packages/game-logic/src/**/*.ts'],
+      // Game rules and the game history must be fully tested.
+      include: ['packages/game-logic/src/**/*.ts', 'packages/server/src/history/**/*.ts'],
       thresholds: {
         statements: 100,
         branches: 100,

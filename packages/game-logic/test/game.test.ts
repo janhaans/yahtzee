@@ -4,6 +4,7 @@ import {
   abortGame,
   chooseBox,
   createGame,
+  nameKey,
   roll,
   scores,
   toggleHold,
@@ -91,6 +92,14 @@ describe('createGame', () => {
     const computer = { ...player('c', 'Computer'), type: 'computer' as const };
     const state = unwrap(createGame([player('a', 'Emma'), computer]));
     expect(state.players[1]?.type).toBe('computer');
+  });
+});
+
+describe('nameKey', () => {
+  it('ignores upper/lower case and extra spaces, like the setup check', () => {
+    expect(nameKey('  Anna   SOPHIE ')).toBe('anna sophie');
+    expect(nameKey('Anna Sophie')).toBe(nameKey('anna\tsophie'));
+    expect(nameKey('Emma')).not.toBe(nameKey('Emmy'));
   });
 });
 

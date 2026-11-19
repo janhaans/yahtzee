@@ -1,29 +1,25 @@
-import { describe, expect, it } from 'vitest';
-import { ROUNDS, allowedBoxes, type DieValue, type Rng } from '@yahtzee/game-logic';
+import { describe, expect, it, vi } from 'vitest';
+import { ROUNDS, type Rng } from '@yahtzee/game-logic';
+import { openDatabase } from '../src/history/db.js';
+import { HistoryStore } from '../src/history/store.js';
 import { GameRoom } from '../src/room.js';
-
-/** Rng that always rolls the same face. */
-function always(face: DieValue): Rng {
-  return () => (face - 1) / 6 + 0.01;
-}
+import {
+  FlakyHistory,
+  always,
+  memoryHistory,
+  newRoom as roomWith,
+  playTurn,
+  ticking,
+} from './helpers.js';
 
 function newRoom(rng: Rng = Math.random): GameRoom {
-  let id = 0;
-  return new GameRoom(rng, () => `p${++id}`);
+  return roomWith(memoryHistory(), rng);
 }
 
 function started(rng?: Rng, names = ['Emma', 'Sara']): GameRoom {
   const room = newRoom(rng);
   expect(room.create(names)).toEqual({ ok: true });
   return room;
-}
-
-/** Plays one turn: roll once and take the first allowed box. */
-function playTurn(room: GameRoom): void {
-  expect(room.roll()).toEqual({ ok: true });
-  const state = room.state!;
-  const box = allowedBoxes(state.dice!, state.scorecards[state.currentPlayerIndex]!)[0];
-  expect(room.chooseBox(box)).toEqual({ ok: true });
 }
 
 describe('GameRoom', () => {
@@ -38,7 +34,7 @@ describe('GameRoom', () => {
   it('creates human players with ids, avatar and colour', () => {
     const room = started(undefined, ['Emma', 'Sara', 'Noor', 'Lieke']);
     const players = room.state!.players;
-    expect(players.map((p) => p.id)).toEqual(['p1', 'p2', 'p3', 'p4']);
+    expect(new Set(players.map((p) => p.id)).size).toBe(4);
     expect(players.every((p) => p.type === 'human')).toBe(true);
     expect(new Set(players.map((p) => p.avatar)).size).toBe(4);
     expect(new Set(players.map((p) => p.colour)).size).toBe(4);
@@ -155,5 +151,238 @@ describe('GameRoom', () => {
     expect(room.abort()).toEqual({ ok: false, error: 'game_over' });
     expect(room.rematch()).toEqual({ ok: false, error: 'game_not_finished' });
     expect(room.create(['Noor', 'Lieke'])).toEqual({ ok: true });
+  });
+});
+
+describe('GameRoom history', () => {
+  function setup() {
+    const db = openDatabase(':memory:');
+    const history = new HistoryStore(db);
+    const room = roomWith(history, always(3));
+    return { db, history, room };
+  }
+
+  it('saves nothing until the first roll', () => {
+    const { history, room } = setup();
+    room.create(['Emma', 'Sara']);
+    expect(history.listGames().total).toBe(0);
+    room.abort();
+    expect(history.listGames().total).toBe(0);
+    expect(history.listPlayers()).toEqual([]);
+  });
+
+  it('creates the game at the first roll and saves every roll and hold', () => {
+    const { history, room } = setup();
+    room.create(['Emma', 'Sara']);
+    room.roll();
+    const [game] = history.listGames().items;
+    expect(game).toMatchObject({
+      startedAt: '2026-11-19T18:00:00.000Z',
+      endedAt: null,
+      durationSeconds: null,
+      status: 'in_progress',
+      roundsPlayed: 1,
+      theme: null,
+    });
+    expect(game!.players.map((p) => p.name)).toEqual(['Emma', 'Sara']);
+
+    room.toggleHold(1);
+    expect(history.findUnfinished()?.state.held).toEqual([false, true, false, false, false]);
+  });
+
+  it('saves the scorecards and the turn after every box', () => {
+    const { db, history, room } = setup();
+    room.create(['Emma', 'Sara']);
+    room.roll();
+    room.roll();
+    room.chooseBox('threes');
+    const detail = history.getGame(history.listGames().items[0]!.id)!;
+    expect(detail.players[0]).toMatchObject({ upperTotal: 15, finalScore: 15 });
+    expect(detail.players[0]!.scorecard.threes).toBe(15);
+    expect(detail.players[1]!.scorecard.threes).toBeNull();
+
+    const turns = db.prepare('SELECT round, seat_order, rolls, box, points FROM turns').all();
+    expect(turns).toEqual([
+      {
+        round: 1,
+        seat_order: 0,
+        rolls: JSON.stringify([
+          [3, 3, 3, 3, 3],
+          [3, 3, 3, 3, 3],
+        ]),
+        box: 'threes',
+        points: 15,
+      },
+    ]);
+  });
+
+  it('saves a finished game with all tied players as winners', () => {
+    const { history, room } = setup();
+    room.create(['Emma', 'Sara']);
+    for (let turn = 0; turn < ROUNDS * 2; turn++) playTurn(room);
+
+    const [game] = history.listGames().items;
+    expect(game!.status).toBe('finished');
+    expect(game!.roundsPlayed).toBe(13);
+    expect(game!.endedAt).not.toBeNull();
+    expect(game!.durationSeconds).toBe(ROUNDS * 2 * 2 * 60 - 60);
+    expect(game!.players.every((p) => p.isWinner)).toBe(true);
+    expect(history.findUnfinished()).toBeNull();
+  });
+
+  it('saves an aborted game without a winner, with the round reached', () => {
+    const { history, room } = setup();
+    room.create(['Emma', 'Sara']);
+    playTurn(room);
+    playTurn(room);
+    playTurn(room);
+    room.abort();
+    const [game] = history.listGames().items;
+    expect(game).toMatchObject({ status: 'aborted', roundsPlayed: 2 });
+    expect(game!.endedAt).not.toBeNull();
+    expect(game!.players.some((p) => p.isWinner)).toBe(false);
+  });
+
+  it('stores a rematch as a new game with the same players', () => {
+    const { history, room } = setup();
+    room.create(['Emma', 'Sara']);
+    for (let turn = 0; turn < ROUNDS * 2; turn++) playTurn(room);
+    room.rematch();
+    room.roll();
+    expect(history.listGames().total).toBe(2);
+    expect(history.listPlayers()).toHaveLength(2);
+  });
+
+  it('recognises a returning player by name, ignoring case and extra spaces', () => {
+    const { history, room } = setup();
+    room.create(['Anna Sophie', 'Sara']);
+    room.roll();
+    room.abort();
+    room.create(['  anna   SOPHIE ', 'Noor']);
+    room.roll();
+
+    const players = history.listPlayers();
+    expect(players.map((p) => p.name)).toEqual(['anna SOPHIE', 'Noor', 'Sara']);
+    const anna = players[0]!.id;
+    expect(history.listGames({ players: [anna] }).total).toBe(2);
+  });
+
+  it('keeps playing when a save fails and saves everything after the next turn', () => {
+    const flaky = new FlakyHistory();
+    const log = vi.fn();
+    const room = new GameRoom(always(2), { history: flaky, now: ticking(), log });
+    room.create(['Emma', 'Sara']);
+
+    flaky.failing = true;
+    expect(room.roll()).toEqual({ ok: true });
+    expect(room.chooseBox('twos')).toEqual({ ok: true });
+    expect(room.saveFailed).toBe(true);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('trying again'), expect.any(Error));
+    expect(flaky.inner.listGames().total).toBe(0);
+
+    flaky.failing = false;
+    playTurn(room);
+    expect(room.saveFailed).toBe(false);
+    const detail = flaky.inner.getGame(flaky.inner.listGames().items[0]!.id)!;
+    expect(detail.players[0]!.scorecard.twos).toBe(10);
+    expect(detail.players[1]!.scorecard.ones).toBe(0);
+  });
+
+  it('saves a game that ended during a failure when the next game starts', () => {
+    const flaky = new FlakyHistory();
+    const room = roomWith(flaky, always(4));
+    room.create(['Emma', 'Sara']);
+    playTurn(room);
+    flaky.failing = true;
+    room.abort();
+    expect(room.saveFailed).toBe(true);
+    expect(flaky.inner.listGames().items[0]!.status).toBe('in_progress');
+
+    flaky.failing = false;
+    room.create(['Noor', 'Lieke']);
+    expect(room.saveFailed).toBe(true);
+    room.roll();
+    expect(room.saveFailed).toBe(false);
+    const statuses = flaky.inner.listGames().items.map((g) => g.status);
+    expect(statuses.sort()).toEqual(['aborted', 'in_progress']);
+  });
+});
+
+describe('GameRoom unfinished game', () => {
+  /** Plays a bit, then "restarts the server": a new room on the same history. */
+  function restarted() {
+    const history = memoryHistory();
+    const before = roomWith(history, always(5));
+    before.create(['Emma', 'Sara']);
+    playTurn(before);
+    before.roll();
+    before.toggleHold(0);
+    const after = roomWith(history, always(5));
+    return { history, before, after };
+  }
+
+  it('offers the unfinished game after a restart and blocks a new game', () => {
+    const { after } = restarted();
+    expect(after.state).toBeNull();
+    expect(after.unfinished).toEqual({
+      players: expect.arrayContaining([expect.objectContaining({ name: 'Emma' })]),
+      round: 1,
+      startedAt: '2026-11-19T18:00:00.000Z',
+    });
+    expect(after.create(['Noor', 'Lieke'])).toEqual({ ok: false, error: 'unfinished_game' });
+  });
+
+  it('continues exactly where the game was, with the same dice', () => {
+    const { history, before, after } = restarted();
+    expect(after.resume()).toEqual({ ok: true });
+    expect(after.unfinished).toBeNull();
+    expect(after.state).toEqual(before.state);
+
+    after.chooseBox('fives');
+    expect(history.listGames().total).toBe(1);
+    const game = history.getGame(history.listGames().items[0]!.id)!;
+    expect(game.players[1]!.scorecard.fives).toBe(25);
+    expect(after.resume()).toEqual({ ok: false, error: 'no_unfinished_game' });
+  });
+
+  it('stops the unfinished game: aborted, ending at its last save', () => {
+    const { history, after } = restarted();
+    expect(after.discardUnfinished()).toEqual({ ok: true });
+    expect(after.unfinished).toBeNull();
+    expect(after.state).toBeNull();
+    const [game] = history.listGames().items;
+    expect(game).toMatchObject({ status: 'aborted', endedAt: '2026-11-19T18:03:00.000Z' });
+    expect(after.discardUnfinished()).toEqual({ ok: false, error: 'no_unfinished_game' });
+    expect(after.create(['Noor', 'Lieke'])).toEqual({ ok: true });
+  });
+
+  it('keeps trying to save a stopped unfinished game', () => {
+    const { history } = restarted();
+    const flaky = new FlakyHistory(history);
+    const room = roomWith(flaky);
+    flaky.failing = true;
+    room.discardUnfinished();
+    expect(room.saveFailed).toBe(true);
+    flaky.failing = false;
+    room.create(['Noor', 'Lieke']);
+    room.roll();
+    expect(room.saveFailed).toBe(false);
+    expect(history.listGames({ status: 'aborted' }).total).toBe(1);
+  });
+
+  it('starts normally when the history cannot be read', () => {
+    const log = vi.fn();
+    const room = new GameRoom(Math.random, {
+      history: {
+        save: () => {},
+        findUnfinished: () => {
+          throw new Error('broken file');
+        },
+      },
+      log,
+    });
+    expect(room.unfinished).toBeNull();
+    expect(room.create(['Emma', 'Sara'])).toEqual({ ok: true });
+    expect(log).toHaveBeenCalled();
   });
 });

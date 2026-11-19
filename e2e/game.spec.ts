@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import type { GameList } from '@yahtzee/server/api';
 
 /** Opens the game table and makes sure no game is running, then opens player setup. */
 async function openSetup(page: Page) {
@@ -21,6 +22,13 @@ async function startGame(page: Page, names: string[]) {
   for (const [i, name] of names.entries()) await inputs.nth(i).fill(name);
   await page.getByRole('button', { name: 'Start!' }).click();
   await expect(page.getByText('Ronde 1 van 13')).toBeVisible();
+}
+
+/** The newest game in the history. */
+async function latestGame(page: Page) {
+  const response = await page.request.get('/api/games?pageSize=1');
+  expect(response.ok()).toBe(true);
+  return ((await response.json()) as GameList).items[0]!;
 }
 
 /** One turn: roll, hold the first die, roll again and take the first box that can be chosen. */
@@ -66,6 +74,16 @@ test('two players play a full game of 13 rounds', async ({ page }) => {
   // Every box of both players is filled in on the final scorecard.
   await expect(page.locator('.score-table tbody .filled')).toHaveCount(26);
 
+  // The game is in the history as finished, with the same winner(s).
+  const saved = await latestGame(page);
+  expect(saved.status).toBe('finished');
+  expect(saved.roundsPlayed).toBe(13);
+  expect(saved.endedAt).not.toBeNull();
+  expect(saved.players.map((p) => p.name)).toEqual(['Emma', 'Sara']);
+  expect(saved.topScore).toBe(points[0]);
+  const savedWinners = saved.players.filter((p) => p.isWinner).map((p) => p.name);
+  expect(savedWinners).toEqual(points[0] === points[1] ? ['Emma', 'Sara'] : [best[0]]);
+
   await page.getByRole('button', { name: 'Nog een keer (zelfde spelers)' }).click();
   await expect(page.getByText('Ronde 1 van 13')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Emma is aan de beurt!' })).toBeVisible();
@@ -82,6 +100,23 @@ test('a game can be stopped early', async ({ page }) => {
   await page.getByRole('button', { name: 'Stop spel' }).click();
   await page.getByRole('button', { name: 'Ja, stoppen' }).click();
   await expect(page.getByRole('button', { name: 'Nieuw spel' })).toBeVisible();
+
+  // The game is in the history as aborted, without a winner.
+  const saved = await latestGame(page);
+  expect(saved.status).toBe('aborted');
+  expect(saved.roundsPlayed).toBe(1);
+  expect(saved.players.map((p) => p.name)).toEqual(['Noor', 'Lieke', 'Fenna']);
+  expect(saved.players.some((p) => p.isWinner)).toBe(false);
+});
+
+test('setup suggests names from earlier games', async ({ page }) => {
+  await openSetup(page);
+  await expect(page.getByText('Eerder gespeeld:')).toBeVisible();
+  await page.getByRole('button', { name: 'Noor meedoen' }).click();
+  await page.getByRole('button', { name: 'Emma meedoen' }).click();
+  await expect(page.getByRole('textbox').nth(0)).toHaveValue('Noor');
+  await expect(page.getByRole('textbox').nth(1)).toHaveValue('Emma');
+  await expect(page.getByText('Eerder gespeeld:')).toBeHidden();
 });
 
 test('setup allows 2 to 4 players with unique names', async ({ page }) => {

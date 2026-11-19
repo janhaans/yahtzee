@@ -4,7 +4,9 @@ import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { Server } from 'socket.io';
 import type { Ack, ActionResult, ClientToServerEvents, ServerToClientEvents } from './protocol.js';
-import { GameRoom } from './room.js';
+import { registerHistoryRoutes } from './history/routes.js';
+import type { HistoryStore } from './history/store.js';
+import type { GameRoom } from './room.js';
 
 const WEB_DIST = fileURLToPath(new URL('../../web/dist', import.meta.url));
 
@@ -14,9 +16,14 @@ export interface App {
   readonly room: GameRoom;
 }
 
-export async function buildApp(options: { room: GameRoom; serveWeb: boolean }): Promise<App> {
+export async function buildApp(options: {
+  room: GameRoom;
+  history: HistoryStore;
+  serveWeb: boolean;
+}): Promise<App> {
   const { room } = options;
   const fastify = Fastify({ logger: { level: 'warn' } });
+  registerHistoryRoutes(fastify, options.history);
 
   if (options.serveWeb) {
     if (!existsSync(WEB_DIST)) {
@@ -27,16 +34,24 @@ export async function buildApp(options: { room: GameRoom; serveWeb: boolean }): 
     await fastify.register(fastifyStatic, { root: WEB_DIST });
     // Client-side pages (/, /speler, /dashboard) all load the same index.html.
     fastify.setNotFoundHandler((request, reply) => {
-      if (request.method === 'GET') return reply.sendFile('index.html');
+      if (request.method === 'GET' && !request.url.startsWith('/api/')) {
+        return reply.sendFile('index.html');
+      }
       return reply.code(404).send();
     });
   }
 
   const io = new Server<ClientToServerEvents, ServerToClientEvents>(fastify.server);
-  const broadcast = () => io.emit('game:state', room.state);
+  type Target = Pick<typeof io, 'emit'>;
+  const sendAll = (target: Target) => {
+    target.emit('game:state', room.state);
+    target.emit('game:unfinished', room.unfinished);
+    target.emit('history:saveFailed', room.saveFailed);
+  };
+  const broadcast = () => sendAll(io);
 
   io.on('connection', (socket) => {
-    socket.emit('game:state', room.state);
+    sendAll(socket);
 
     // Runs an intention, answers the sender and tells every screen about the new state.
     const handle = (ack: unknown, action: () => ActionResult) => {
@@ -62,6 +77,8 @@ export async function buildApp(options: { room: GameRoom; serveWeb: boolean }): 
     );
     socket.on('game:abort', (ack) => handle(ack, () => room.abort()));
     socket.on('game:rematch', (ack) => handle(ack, () => room.rematch()));
+    socket.on('game:resume', (ack) => handle(ack, () => room.resume()));
+    socket.on('game:discardUnfinished', (ack) => handle(ack, () => room.discardUnfinished()));
   });
 
   return { fastify, io, room };

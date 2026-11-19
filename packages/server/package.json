@@ -2,10 +2,11 @@
   "name": "@yahtzee/server",
   "private": true,
   "version": "0.1.0",
-  "description": "Fastify + Socket.IO server that owns the game state (SQLite history follows in milestone 3)",
+  "description": "Fastify + Socket.IO server that owns the game state and keeps the game history in SQLite",
   "type": "module",
   "exports": {
-    "./protocol": "./src/protocol.ts"
+    "./protocol": "./src/protocol.ts",
+    "./api": "./src/history/api.ts"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
