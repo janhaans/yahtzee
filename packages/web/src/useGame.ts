@@ -5,6 +5,7 @@ import type {
   ActionResult,
   ClientToServerEvents,
   ServerToClientEvents,
+  UnfinishedGame,
 } from '@yahtzee/server/protocol';
 
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -19,6 +20,8 @@ export interface GameActions {
   chooseBox(box: BoxId): Promise<ClientResult>;
   abort(): Promise<ClientResult>;
   rematch(): Promise<ClientResult>;
+  resume(): Promise<ClientResult>;
+  discardUnfinished(): Promise<ClientResult>;
 }
 
 const ACK_TIMEOUT_MS = 5000;
@@ -35,6 +38,10 @@ export interface GameConnection {
   /** Undefined until the server has sent the first state. */
   readonly state: GameState | null | undefined;
   readonly connected: boolean;
+  /** A game that was still being played when the server stopped, waiting for a choice. */
+  readonly unfinished: UnfinishedGame | null;
+  /** True while the server could not save the game to the history. */
+  readonly saveFailed: boolean;
   readonly actions: GameActions;
 }
 
@@ -43,11 +50,15 @@ export function useGame(): GameConnection {
   const socket: GameSocket = useMemo(() => io({ autoConnect: false }), []);
   const [state, setState] = useState<GameState | null | undefined>(undefined);
   const [connected, setConnected] = useState(false);
+  const [unfinished, setUnfinished] = useState<UnfinishedGame | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   useEffect(() => {
     socket.on('connect', () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));
     socket.on('game:state', setState);
+    socket.on('game:unfinished', setUnfinished);
+    socket.on('history:saveFailed', setSaveFailed);
     socket.connect();
     return () => {
       socket.removeAllListeners();
@@ -64,8 +75,10 @@ export function useGame(): GameConnection {
       chooseBox: (box) => answer(send().emitWithAck('game:chooseBox', { box })),
       abort: () => answer(send().emitWithAck('game:abort')),
       rematch: () => answer(send().emitWithAck('game:rematch')),
+      resume: () => answer(send().emitWithAck('game:resume')),
+      discardUnfinished: () => answer(send().emitWithAck('game:discardUnfinished')),
     };
   }, [socket]);
 
-  return { state, connected, actions };
+  return { state, connected, unfinished, saveFailed, actions };
 }

@@ -91,6 +91,22 @@ export const nl = {
     whoStarts: 'Wie begint?',
     start: 'Start!',
     back: 'Terug',
+    recent: 'Eerder gespeeld:',
+    addRecent: (name: string) => `${name} meedoen`,
+  },
+
+  unfinished: {
+    title: 'Je hebt een onafgemaakt spel. Verder spelen of stoppen?',
+    round: (round: number, total: number) => `Jullie waren in ronde ${round} van ${total}.`,
+    startedAt: (time: string) => `Begonnen op ${time}`,
+    stopNote: 'Stoppen bewaart het spel als afgebroken.',
+    continue: 'Verder spelen',
+    stop: 'Stoppen',
+  },
+
+  history: {
+    saveFailed:
+      'Oeps, het spel kon even niet bewaard worden. Na de volgende beurt proberen we het opnieuw!',
   },
 
   game: {
@@ -175,6 +191,9 @@ export const nl = {
     game_in_progress: 'Er wordt al een spel gespeeld.',
     game_not_finished: 'Het spel is nog niet klaar.',
     invalid_input: 'Er ging iets mis. Probeer het nog eens.',
+    unfinished_game:
+      'Er staat nog een onafgemaakt spel klaar. Kies eerst: verder spelen of stoppen.',
+    no_unfinished_game: 'Er is al gekozen wat er met het oude spel gebeurt.',
     disconnected: 'Even geen verbinding met de spelcomputer...',
   } satisfies Record<ActionError | 'disconnected', string>,
 } as const;

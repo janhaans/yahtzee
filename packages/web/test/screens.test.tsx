@@ -15,6 +15,9 @@ import { EndScreen } from '../src/components/EndScreen';
 import { GameScreen } from '../src/components/GameScreen';
 import { ScoreTable } from '../src/components/ScoreTable';
 import { SetupScreen } from '../src/components/SetupScreen';
+import { UnfinishedDialog } from '../src/components/UnfinishedDialog';
+import { fetchRecentNames } from '../src/api';
+import { formatDateTime } from '../src/format';
 import type { GameActions } from '../src/useGame';
 
 afterEach(cleanup);
@@ -43,6 +46,8 @@ function fakeActions(): GameActions {
     chooseBox: vi.fn(ok),
     abort: vi.fn(ok),
     rematch: vi.fn(ok),
+    resume: vi.fn(ok),
+    discardUnfinished: vi.fn(ok),
   };
 }
 
@@ -151,6 +156,84 @@ describe('SetupScreen', () => {
     expect(screen.queryByRole('button', { name: '5' })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: '4' }));
     expect(screen.getAllByRole('textbox')).toHaveLength(4);
+  });
+});
+
+describe('SetupScreen recent names', () => {
+  it('fills the first empty field with a recent name', async () => {
+    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
+    render(<SetupScreen onStart={onStart} onBack={() => {}} recentNames={['Emma', 'Sara']} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Sara meedoen' }));
+    expect(
+      screen.getAllByRole('textbox').map((input) => (input as HTMLInputElement).value),
+    ).toEqual(['Sara', '']);
+    // A name already filled in is no longer suggested.
+    expect(screen.queryByRole('button', { name: 'Sara meedoen' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Emma meedoen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    expect(onStart).toHaveBeenCalledWith(['Sara', 'Emma']);
+  });
+
+  it('matches names ignoring case and extra spaces, and hides when every field is full', async () => {
+    render(
+      <SetupScreen onStart={vi.fn()} onBack={() => {}} recentNames={['Anna Sophie', 'Noor']} />,
+    );
+    const [first, second] = screen.getAllByRole('textbox');
+    await userEvent.type(first!, ' anna   SOPHIE');
+    expect(screen.queryByRole('button', { name: 'Anna Sophie meedoen' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Noor meedoen' })).toBeVisible();
+    await userEvent.type(second!, 'Lieke');
+    expect(screen.queryByText('Eerder gespeeld:')).toBeNull();
+  });
+});
+
+describe('UnfinishedDialog', () => {
+  const game = { players, round: 5, startedAt: '2026-11-19T18:05:00.000Z' };
+
+  it('shows the players, round and start time in Dutch time', () => {
+    render(<UnfinishedDialog game={game} onContinue={() => {}} onStop={() => {}} />);
+    const dialog = screen.getByRole('dialog', { name: /onafgemaakt spel/ });
+    expect(dialog).toHaveTextContent('Emma');
+    expect(dialog).toHaveTextContent('Sara');
+    expect(dialog).toHaveTextContent('ronde 5 van 13');
+    expect(dialog).toHaveTextContent('Begonnen op 19-11-2026 19:05');
+  });
+
+  it('needs a choice: continue or stop', async () => {
+    const onContinue = vi.fn();
+    const onStop = vi.fn();
+    render(<UnfinishedDialog game={game} onContinue={onContinue} onStop={onStop} />);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('dialog')).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Stoppen' }));
+    expect(onStop).toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Verder spelen' }));
+    expect(onContinue).toHaveBeenCalled();
+  });
+});
+
+describe('formatDateTime', () => {
+  it('shows UTC times in Amsterdam as dd-mm-yyyy HH:mm, in winter and summer', () => {
+    expect(formatDateTime('2026-11-19T23:30:00.000Z')).toBe('20-11-2026 00:30');
+    expect(formatDateTime('2026-07-01T08:05:00.000Z')).toBe('01-07-2026 10:05');
+  });
+});
+
+describe('fetchRecentNames', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('returns the names, or nothing when the server cannot answer', async () => {
+    const reply = (ok: boolean) =>
+      vi.fn(() => Promise.resolve({ ok, json: () => Promise.resolve([{ name: 'Emma' }]) }));
+    vi.stubGlobal('fetch', reply(true));
+    expect(await fetchRecentNames()).toEqual(['Emma']);
+    vi.stubGlobal('fetch', reply(false));
+    expect(await fetchRecentNames()).toEqual([]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new Error('offline'))),
+    );
+    expect(await fetchRecentNames()).toEqual([]);
   });
 });
 

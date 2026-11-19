@@ -54,6 +54,11 @@ export function normalizeName(name: string): string {
   return name.trim().replace(/\s+/g, ' ');
 }
 
+/** The key two names are compared by: normalized and ignoring upper/lower case. */
+export function nameKey(name: string): string {
+  return normalizeName(name).toLocaleLowerCase('nl');
+}
+
 function validatePlayers(players: readonly Player[]): SetupError | null {
   if (players.length < MIN_PLAYERS) return 'too_few_players';
   if (players.length > MAX_PLAYERS) return 'too_many_players';
@@ -64,7 +69,7 @@ function validatePlayers(players: readonly Player[]): SetupError | null {
     const name = normalizeName(player.name);
     if (name.length === 0) return 'name_required';
     if (name.length > MAX_NAME_LENGTH) return 'name_too_long';
-    const key = name.toLocaleLowerCase('nl');
+    const key = nameKey(name);
     if (names.has(key)) return 'duplicate_name';
     names.add(key);
   }

@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react';
-import { MAX_NAME_LENGTH, MAX_PLAYERS, MIN_PLAYERS } from '@yahtzee/game-logic';
+import { MAX_NAME_LENGTH, MAX_PLAYERS, MIN_PLAYERS, nameKey } from '@yahtzee/game-logic';
 import { nl } from '../i18n/nl';
 import type { ClientResult } from '../useGame';
 
 interface Props {
   onStart: (names: string[]) => Promise<ClientResult>;
   onBack: () => void;
+  /** Names from earlier games, most recent first, for quick setup. */
+  recentNames?: readonly string[];
 }
 
 const COUNTS = Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => MIN_PLAYERS + i);
@@ -19,7 +21,7 @@ function shuffled<T>(items: readonly T[]): T[] {
   return copy;
 }
 
-export function SetupScreen({ onStart, onBack }: Props) {
+export function SetupScreen({ onStart, onBack, recentNames = [] }: Props) {
   const [names, setNames] = useState<string[]>(['', '']);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +30,11 @@ export function SetupScreen({ onStart, onBack }: Props) {
 
   const setName = (index: number, name: string) =>
     setNames((current) => current.map((n, i) => (i === index ? name : n)));
+
+  // Suggest names nobody has typed yet; tapping one fills the first empty field.
+  const taken = new Set(names.map(nameKey));
+  const suggestions = recentNames.filter((name) => !taken.has(nameKey(name)));
+  const firstEmpty = names.findIndex((name) => nameKey(name) === '');
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -71,6 +78,23 @@ export function SetupScreen({ onStart, onBack }: Props) {
             </li>
           ))}
         </ol>
+
+        {suggestions.length > 0 && firstEmpty !== -1 && (
+          <div className="recent-names">
+            <span className="hint">{nl.setup.recent}</span>
+            {suggestions.map((name) => (
+              <button
+                key={name}
+                type="button"
+                className="button chip"
+                aria-label={nl.setup.addRecent(name)}
+                onClick={() => setName(firstEmpty, name)}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {error && (
           <p className="error" role="alert">

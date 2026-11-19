@@ -532,3 +532,40 @@ h2 {
   background: var(--accent);
   font-weight: 700;
 }
+
+.save-banner {
+  margin: 0;
+  padding: 6px 16px;
+  text-align: center;
+  background: var(--accent);
+  font-size: 1rem;
+}
+
+.recent-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.button.chip {
+  min-height: 48px;
+  padding: 6px 16px;
+  border-radius: 999px;
+}
+
+.unfinished-players {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.unfinished-players li {
+  border: 3px solid;
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-weight: 700;
+}

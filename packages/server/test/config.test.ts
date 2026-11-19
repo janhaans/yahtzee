@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readConfig } from '../src/config.js';
 import { createRng, seededRng } from '../src/rng.js';
@@ -9,6 +10,7 @@ describe('readConfig', () => {
       host: '127.0.0.1',
       serveWeb: false,
       seed: null,
+      dbPath: resolve(import.meta.dirname, '../../../data/yahtzee.db'),
     });
   });
 
@@ -33,6 +35,10 @@ describe('readConfig', () => {
     expect(readConfig({ NODE_ENV: 'test', YAHTZEE_SEED: '0' }).seed).toBe(0);
     expect(readConfig({ YAHTZEE_SEED: 'abc' }).seed).toBeNull();
     expect(readConfig({ YAHTZEE_SEED: '' }).seed).toBeNull();
+  });
+
+  it('reads the database file from YAHTZEE_DB', () => {
+    expect(readConfig({ YAHTZEE_DB: '/tmp/test.db' }).dbPath).toBe('/tmp/test.db');
   });
 
   it('ignores YAHTZEE_SEED in production', () => {

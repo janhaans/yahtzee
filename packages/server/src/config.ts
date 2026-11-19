@@ -1,3 +1,8 @@
+import { fileURLToPath } from 'node:url';
+
+/** The history database, in the `data/` folder at the root of the project. */
+const DEFAULT_DB_PATH = fileURLToPath(new URL('../../../data/yahtzee.db', import.meta.url));
+
 export interface Config {
   readonly port: number;
   readonly host: string;
@@ -5,6 +10,8 @@ export interface Config {
   readonly serveWeb: boolean;
   /** Seed for predictable dice. Only ever set outside production. */
   readonly seed: number | null;
+  /** SQLite file with the game history. */
+  readonly dbPath: string;
 }
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -23,5 +30,6 @@ export function readConfig(env: Env): Config {
     host: env.HOST ?? (production ? '0.0.0.0' : '127.0.0.1'),
     serveWeb: production || env.SERVE_WEB === '1',
     seed: !production && env.YAHTZEE_SEED && Number.isInteger(seed) ? seed : null,
+    dbPath: env.YAHTZEE_DB || DEFAULT_DB_PATH,
   };
 }
