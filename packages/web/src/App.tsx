@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRecentPlayers } from './api';
 import { EndScreen } from './components/EndScreen';
+import { FunLayer } from './components/FunLayer';
 import { GameScreen } from './components/GameScreen';
 import { SetupScreen } from './components/SetupScreen';
 import { StartScreen } from './components/StartScreen';
@@ -79,6 +80,7 @@ export function App() {
         </p>
       )}
       {screen}
+      <FunLayer state={state} theme={theme} />
       {unfinished && (
         <UnfinishedDialog
           game={unfinished}

@@ -14,6 +14,7 @@ import {
 import type { RecentPlayer } from '../api';
 import { avatarEmoji, defaultAvatar, freeColour } from '../avatars';
 import { nl } from '../i18n/nl';
+import { reducedMotion } from '../motion';
 import type { ClientResult } from '../useGame';
 import { Dialog } from './Dialog';
 
@@ -41,10 +42,6 @@ function shuffled<T>(items: readonly T[]): T[] {
 
 function newRow(theme: ThemeId, seat: number, taken: readonly string[]): NewPlayer {
   return { name: '', avatar: defaultAvatar(theme, seat), colour: freeColour(taken) };
-}
-
-function reducedMotion(): boolean {
-  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
 export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Props) {

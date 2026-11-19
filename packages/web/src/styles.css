@@ -779,3 +779,130 @@ h2 {
     radial-gradient(circle at 30% 80%, #63e6be 0 4px, transparent 5px), #ffdeeb;
   color: #862e5c;
 }
+
+/* Funny messages: a speech bubble that pops up and never blocks a tap. */
+.fun-message {
+  position: fixed;
+  top: 80px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.bubble {
+  margin: 0;
+  max-width: min(90vw, 640px);
+  padding: 14px 24px;
+  border: 4px solid var(--primary);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.4rem;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+  animation: bubble-pop 3.2s ease-out forwards;
+}
+
+@keyframes bubble-pop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  10% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  15%,
+  85% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+}
+
+/* Big turn banner: slides in, tap anywhere to skip. */
+.turn-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.25);
+  z-index: 15;
+  cursor: pointer;
+  animation: overlay-fade 1.6s ease-in-out forwards;
+}
+
+.turn-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 24px 48px;
+  border: 6px solid #fff;
+  border-radius: 32px;
+  color: #fff;
+  text-shadow: 0 2px 4px rgb(0 0 0 / 0.35);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.35);
+  animation: banner-swoosh 1.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
+}
+
+.turn-avatar {
+  font-size: 5rem;
+  animation: avatar-bounce 0.5s ease-in-out 0.3s 2;
+}
+
+.turn-name {
+  font-family: var(--heading-font);
+  font-size: 2.6rem;
+  font-weight: 800;
+}
+
+.turn-cheer {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+@keyframes overlay-fade {
+  0%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes banner-swoosh {
+  0% {
+    transform: translateX(-120vw) rotate(-8deg);
+  }
+  25% {
+    transform: translateX(0) rotate(2deg);
+  }
+  30%,
+  80% {
+    transform: translateX(0) rotate(0);
+  }
+  100% {
+    transform: translateX(120vw) rotate(8deg);
+  }
+}
+
+@keyframes avatar-bounce {
+  50% {
+    transform: translateY(-18px) scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble {
+    animation: none;
+  }
+}

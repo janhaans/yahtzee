@@ -13,6 +13,8 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     ...devices['Desktop Chrome'],
+    // Dice land at once and banners are skipped, so the tests do not wait for animations.
+    reducedMotion: 'reduce',
   },
   webServer: {
     command: `rm -f data/e2e.db* && npm run build -w @yahtzee/web && NODE_ENV=test SERVE_WEB=1 YAHTZEE_SEED=2026 YAHTZEE_DB=data/e2e.db PORT=${PORT} npx tsx packages/server/src/index.ts`,

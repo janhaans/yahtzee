@@ -1,6 +1,7 @@
 import type { BoxId } from '@yahtzee/game-logic';
 import type { AvatarId, Colour, ThemeId } from '@yahtzee/server/looks';
 import type { ActionError } from '@yahtzee/server/protocol';
+import type { MessageKind } from '../fun/messages';
 
 /** All Dutch user-facing text. More sections are added per milestone. */
 export const nl = {
@@ -146,6 +147,125 @@ export const nl = {
     saveFailed:
       'Oeps, het spel kon even niet bewaard worden. Na de volgende beurt proberen we het opnieuw!',
   },
+
+  /** Short, positive reactions per theme. Never mean, and never about boys or girls only. */
+  messages: {
+    voetbal: {
+      yahtzee: [
+        'GOOOAL! Vijf op een rij, wat een wereldgoal!',
+        'Yahtzee! Het hele stadion staat op de banken!',
+        'Hattrick? Nee, een Yahtzee! Nog beter!',
+        'Wat een doelpunt! Vijf dezelfde!',
+      ],
+      yahtzeeBonus: [
+        'Nóg een Yahtzee! 100 bonuspunten, wat een kampioen!',
+        'Weer raak! Dit gaat de geschiedenisboeken in!',
+      ],
+      bonus: [
+        'Bonus binnen! 35 extra punten, net als een strafschop die erin gaat!',
+        'De bovenste rij is af: bonus voor de topper!',
+        'Extra tijd? Nee, extra punten!',
+      ],
+      largeStraight: [
+        'Grote straat... recht op het doel af!',
+        'Wat een sprint over de hele vleugel!',
+        'Van achteren opgebouwd en keihard raak!',
+      ],
+      smallStraight: [
+        'Kleine straat! Mooie combinatie op het middenveld.',
+        'Tik-tak-tik-tak... en raak!',
+        'Netjes overgespeeld, 30 punten!',
+      ],
+      fullHouse: [
+        'Full House! Het stadion is uitverkocht!',
+        'Volle tribunes, volle punten!',
+        'Drie plus twee: een perfect team!',
+      ],
+      high: [
+        'Wat een knaller!',
+        'Die zat in de kruising!',
+        'Een omhaal van jewelste!',
+        'Daar kon de keeper niks aan doen!',
+        'Topscorer in actie!',
+      ],
+      good: [
+        'Mooi schot!',
+        'Netjes gespeeld!',
+        'Punten op het scorebord!',
+        'Lekker bezig, de trainer is trots!',
+        'Goede pass!',
+        'Zo bouw je een overwinning!',
+        'Zo, die zit!',
+      ],
+      zero: [
+        'Oei, nul punten. Dat was buitenspel!',
+        'Net naast! Volgende keer zit hij erin.',
+        'Paal! Pech, maar je komt terug.',
+        'Even op adem komen op de bank. Volgende ronde beter!',
+        'De keeper had hem. Kop op, nieuwe kans!',
+      ],
+    },
+    snoep: {
+      yahtzee: [
+        'YAHTZEE! Een hele zak snoep voor jou!',
+        'Vijf dezelfde: zo zoet als een suikerspin!',
+        'Jackpot in de snoepwinkel!',
+        'Yahtzee! Het regent snoepjes!',
+      ],
+      yahtzeeBonus: [
+        'Nóg een Yahtzee! 100 extra snoeppunten!',
+        'Weer een Yahtzee! De snoeppot is leeg!',
+      ],
+      bonus: [
+        'Bonus! 35 punten extra, als een kers op de taart!',
+        'De bovenste rij is af: extra toetje!',
+        'Bonuspunten, zo lekker als warme chocolademelk!',
+      ],
+      largeStraight: [
+        "Grote straat! Een hele rij lolly's!",
+        'Vijf op een rij, als een ketting van snoepjes!',
+        'Grote straat, zo lang als een dropveter!',
+      ],
+      smallStraight: [
+        'Kleine straat! Een rijtje zuurtjes!',
+        'Vier op een rij, zo netjes als een doos bonbons!',
+        '30 punten, wat een smakelijke straat!',
+      ],
+      fullHouse: [
+        'Full House! Zoet als een snoepje!',
+        'Een vol snoepzakje!',
+        'Drie en twee: een perfecte mix!',
+      ],
+      high: [
+        'Mmm, wat een lekkere worp!',
+        'Wat een smulpunten!',
+        'Dat is een dubbele bol ijs waard!',
+        'Kassa! Snoepjes voor iedereen!',
+        'Zo zoet als suikerspin!',
+      ],
+      good: [
+        'Lekker gedaan!',
+        'Smakelijk!',
+        'Weer een paar snoepjes in je zak!',
+        'Mooi zo, nog een snoepje erbij!',
+        'Hap, punten!',
+        'Dat smaakt naar meer!',
+      ],
+      zero: [
+        'Nul punten... die dobbelstenen hebben te veel suiker op.',
+        'Oeps, de snoeppot was even leeg. Volgende keer beter!',
+        'Geen punten, maar wel een gratis lolly voor de moeite!',
+        'Die worp was een zure mat. De volgende is vast zoet!',
+        'Even geen snoep, wel een glimlach!',
+      ],
+    },
+  } satisfies Record<ThemeId, Record<MessageKind, readonly string[]>>,
+
+  /** A short cheer under the big turn banner. */
+  turnCheer: {
+    voetbal: 'Aan de bal!',
+    snoep: 'Graai in de snoeppot!',
+  } satisfies Record<ThemeId, string>,
 
   game: {
     round: (round: number, total: number) => `Ronde ${round} van ${total}`,

@@ -1,0 +1,263 @@
+// @vitest-environment jsdom
+import '@testing-library/jest-dom/vitest';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  abortGame,
+  chooseBox,
+  createGame,
+  emptyScorecard,
+  roll,
+  toggleHold,
+  type BoxId,
+  type GameState,
+  type Player,
+  type Result,
+} from '@yahtzee/game-logic';
+import { THEMES } from '@yahtzee/server/looks';
+import { FunLayer } from '../src/components/FunLayer';
+import { gameEvents } from '../src/fun/events';
+import { MESSAGE_KINDS, MessagePicker, messageKind } from '../src/fun/messages';
+import { nl } from '../src/i18n/nl';
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+
+const players: Player[] = [
+  { id: 'a', name: 'Emma', avatar: 'cupcake', colour: '#e8457c', type: 'human' },
+  { id: 'b', name: 'Sara', avatar: 'football', colour: '#2e8b57', type: 'human' },
+];
+
+function ok(result: Result<unknown>): GameState {
+  if (!result.ok) throw new Error(String(result.error));
+  return result.state;
+}
+
+/** Dice that always land on this face. */
+const always = (face: number) => () => (face - 1) / 6 + 0.01;
+
+function newGame(): GameState {
+  return ok(createGame(players));
+}
+
+describe('gameEvents', () => {
+  it('starts a game with the first turn', () => {
+    const game = newGame();
+    expect(gameEvents(null, game)).toEqual([{ kind: 'newGame' }, { kind: 'turn', seat: 0 }]);
+    expect(gameEvents(null, null)).toEqual([]);
+    expect(gameEvents(game, null)).toEqual([]);
+    expect(gameEvents(game, game)).toEqual([]);
+  });
+
+  it('sees a roll, which dice were held and a Yahtzee', () => {
+    const start = newGame();
+    const first = ok(roll(start, always(4)));
+    expect(gameEvents(start, first)).toEqual([
+      {
+        kind: 'rolled',
+        seat: 0,
+        dice: [4, 4, 4, 4, 4],
+        held: [false, false, false, false, false],
+        roll: 1,
+        yahtzee: true,
+      },
+    ]);
+    const held = ok(toggleHold(first, 1));
+    expect(gameEvents(first, held)).toEqual([]);
+    let n = 0;
+    const second = ok(roll(held, () => [0, 0.2, 0.4, 0.6][n++ % 4]!));
+    expect(gameEvents(held, second)).toEqual([
+      expect.objectContaining({
+        kind: 'rolled',
+        held: [false, true, false, false, false],
+        roll: 2,
+        yahtzee: false,
+      }),
+    ]);
+  });
+
+  it('sees a scored box, the next turn and the bonuses', () => {
+    const rolled = ok(roll(newGame(), always(6)));
+    const scored = ok(chooseBox(rolled, 'yahtzee'));
+    expect(gameEvents(rolled, scored)).toEqual([
+      {
+        kind: 'scored',
+        seat: 0,
+        box: 'yahtzee',
+        points: 50,
+        upperBonus: false,
+        yahtzeeBonus: false,
+      },
+      { kind: 'turn', seat: 1 },
+    ]);
+
+    // Emma has 60 in the upper boxes; her extra Yahtzee of sixes also brings the bonus.
+    const card = {
+      boxes: { ...emptyScorecard().boxes, yahtzee: 50, fives: 25, fours: 20, threes: 15 },
+      yahtzeeBonusCount: 0,
+    };
+    const before = { ...rolled, scorecards: [card, emptyScorecard()] };
+    const after = ok(chooseBox(before, 'sixes'));
+    expect(gameEvents(before, after)[0]).toMatchObject({
+      kind: 'scored',
+      box: 'sixes',
+      points: 30,
+      upperBonus: true,
+      yahtzeeBonus: true,
+    });
+  });
+
+  it('ends with the winners, and an aborted game gives no turn', () => {
+    const full = Object.fromEntries(
+      Object.keys(emptyScorecard().boxes).map((box) => [box, 0]),
+    ) as Record<BoxId, number>;
+    const almost = (last: BoxId) => ({
+      boxes: { ...full, [last]: null },
+      yahtzeeBonusCount: 0,
+    });
+    const lastTurn: GameState = {
+      ...ok(roll(newGame(), always(2))),
+      round: 13,
+      currentPlayerIndex: 1,
+      scorecards: [{ boxes: full, yahtzeeBonusCount: 0 }, almost('chance')],
+    };
+    const finished = ok(chooseBox(lastTurn, 'chance'));
+    expect(gameEvents(lastTurn, finished)).toEqual([
+      expect.objectContaining({ kind: 'scored', seat: 1, points: 10 }),
+      { kind: 'gameOver', winners: ['b'] },
+    ]);
+    // After the end, nothing more happens until a rematch starts a new game.
+    expect(gameEvents(finished, finished)).toEqual([]);
+    expect(gameEvents(finished, newGame())).toEqual([
+      { kind: 'newGame' },
+      { kind: 'turn', seat: 0 },
+    ]);
+
+    const game = newGame();
+    expect(gameEvents(game, ok(abortGame(game)))).toEqual([]);
+  });
+
+  it('sees a different game with other players as new', () => {
+    const other = ok(createGame([players[1]!, { ...players[0]!, id: 'c' }]));
+    expect(gameEvents(newGame(), other)[0]).toEqual({ kind: 'newGame' });
+    const three = ok(createGame([...players, { ...players[0]!, id: 'd', name: 'Noor' }]));
+    expect(gameEvents(newGame(), three)[0]).toEqual({ kind: 'newGame' });
+  });
+});
+
+describe('messages', () => {
+  const scored = (box: BoxId, points: number, extra = {}) =>
+    ({
+      kind: 'scored',
+      seat: 0,
+      box,
+      points,
+      upperBonus: false,
+      yahtzeeBonus: false,
+      ...extra,
+    }) as const;
+
+  it('fits the most special thing that happened', () => {
+    expect(messageKind(scored('sixes', 30, { yahtzeeBonus: true }))).toBe('yahtzeeBonus');
+    expect(messageKind(scored('yahtzee', 50))).toBe('yahtzee');
+    expect(messageKind(scored('yahtzee', 0))).toBe('zero');
+    expect(messageKind(scored('fours', 16, { upperBonus: true }))).toBe('bonus');
+    expect(messageKind(scored('largeStraight', 40))).toBe('largeStraight');
+    expect(messageKind(scored('largeStraight', 0))).toBe('zero');
+    expect(messageKind(scored('smallStraight', 30))).toBe('smallStraight');
+    expect(messageKind(scored('fullHouse', 25))).toBe('fullHouse');
+    expect(messageKind(scored('chance', 24))).toBe('high');
+    expect(messageKind(scored('chance', 23))).toBe('good');
+  });
+
+  it('has at least 30 different messages per theme, and a few of every kind', () => {
+    for (const theme of THEMES) {
+      const all = MESSAGE_KINDS.flatMap((kind) => nl.messages[theme][kind]);
+      expect(new Set(all).size).toBe(all.length);
+      expect(all.length).toBeGreaterThanOrEqual(30);
+      for (const kind of MESSAGE_KINDS) {
+        expect(nl.messages[theme][kind].length).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
+  it('keeps every message and title kind and gender-neutral', () => {
+    const texts = THEMES.flatMap((theme) =>
+      MESSAGE_KINDS.flatMap((kind) => nl.messages[theme][kind]),
+    );
+    const unkind =
+      /\b(dom|stom|sukkel|loser|verliezer|slecht|koning|koningin|man|vrouw|jongens|meisjes)\b/i;
+    expect(texts.filter((text) => unkind.test(text))).toEqual([]);
+  });
+
+  it('does not repeat a recent message', () => {
+    const picker = new MessagePicker(() => 0);
+    const zero = nl.messages.voetbal.zero;
+    const picked = zero.map(() => picker.pick('voetbal', 'zero'));
+    expect(new Set(picked).size).toBe(zero.length);
+    // When every message was shown recently, it starts over instead of failing.
+    expect(zero).toContain(picker.pick('voetbal', 'zero'));
+    // Only the last few are remembered, so an old message can come back later.
+    const good = nl.messages.snoep.good;
+    const many = Array.from({ length: good.length + 1 }, () => picker.pick('snoep', 'good'));
+    expect(new Set(many.slice(0, good.length)).size).toBe(good.length);
+    expect(many.at(-1)).toBe(many[0]);
+  });
+});
+
+describe('FunLayer', () => {
+  function setup() {
+    vi.useFakeTimers();
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    const start = newGame();
+    const view = render(<FunLayer state={undefined} theme="voetbal" />);
+    const show = (state: GameState | null) =>
+      view.rerender(<FunLayer state={state} theme="voetbal" />);
+    show(null);
+    return { start, show };
+  }
+
+  it('shows a big turn banner that goes away by itself or with a tap', () => {
+    const { start, show } = setup();
+    show(start);
+    expect(screen.getByText('Emma is aan de beurt!')).toBeVisible();
+    expect(screen.getByText('Aan de bal!')).toBeVisible();
+    act(() => vi.advanceTimersByTime(2000));
+    expect(screen.queryByText('Emma is aan de beurt!')).toBeNull();
+
+    const scored = ok(chooseBox(ok(roll(start, always(1))), 'ones'));
+    show(scored);
+    expect(screen.getByText('Sara is aan de beurt!')).toBeVisible();
+    fireEvent.click(screen.getByText('Sara is aan de beurt!'));
+    expect(screen.queryByText('Sara is aan de beurt!')).toBeNull();
+  });
+
+  it('shows a theme message after scoring and after rolling a Yahtzee', () => {
+    const { start, show } = setup();
+    show(start);
+    const rolled = ok(roll(start, always(3)));
+    show(rolled);
+    expect(nl.messages.voetbal.yahtzee).toContain(screen.getByRole('status').textContent);
+    show(ok(chooseBox(rolled, 'chance')));
+    expect(nl.messages.voetbal.good).toContain(screen.getByRole('status').textContent);
+    act(() => vi.advanceTimersByTime(4000));
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+  });
+
+  it('skips the turn banner when the device wants less motion', () => {
+    const { start, show } = setup();
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    show(start);
+    expect(screen.queryByText('Emma is aan de beurt!')).toBeNull();
+  });
+
+  it('shows nothing for the first state after connecting', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    const view = render(<FunLayer state={undefined} theme="snoep" />);
+    view.rerender(<FunLayer state={newGame()} theme="snoep" />);
+    expect(screen.queryByText('Emma is aan de beurt!')).toBeNull();
+  });
+});
