@@ -1,5 +1,5 @@
 import type { BoxId } from '@yahtzee/game-logic';
-import type { AvatarId, Colour } from '@yahtzee/server/looks';
+import type { AvatarId, Colour, ThemeId } from '@yahtzee/server/looks';
 import type { ActionError } from '@yahtzee/server/protocol';
 
 /** All Dutch user-facing text. More sections are added per milestone. */
@@ -80,9 +80,14 @@ export const nl = {
 
   start: {
     newGame: 'Nieuw spel',
-    tagline: 'Gooien, gooien en nog eens gooien!',
+    chooseTheme: 'Kies je thema',
     connecting: 'Verbinden met de spelcomputer...',
   },
+
+  themes: {
+    voetbal: { name: 'Voetbalstadion', tagline: 'Aftrap! Wie scoort de meeste punten?' },
+    snoep: { name: 'Snoepwinkel', tagline: 'Gooien, snoepen en nog eens gooien!' },
+  } satisfies Record<ThemeId, { name: string; tagline: string }>,
 
   setup: {
     title: 'Wie doen er mee?',

@@ -1,8 +1,13 @@
-/* Basic look for milestone 2. Themes in milestone 4 only need to change these variables. */
+/* Base look. Each theme (themes.css) changes these variables and adds its own background. */
 :root {
   --bg: #fff6fb;
   --surface: #ffffff;
   --text: #2b1d33;
+  /* Text straight on the page background (titles, hints outside cards). */
+  --on-bg: #2b1d33;
+  --logo: var(--primary);
+  --logo-shadow: none;
+  --heading-font: var(--font);
   --muted: #7a6a85;
   --primary: #e8457c;
   --primary-text: #ffffff;
@@ -16,7 +21,7 @@
   color-scheme: light;
   font-family: var(--font);
   font-size: 18px;
-  color: var(--text);
+  color: var(--on-bg);
   background: var(--bg);
 }
 
@@ -26,12 +31,19 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
   background: var(--bg);
+}
+
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 h1,
 h2 {
   margin: 0.4em 0;
+  font-family: var(--heading-font);
 }
 
 .screen {
@@ -46,7 +58,8 @@ h2 {
 .logo {
   font-size: 3rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--logo);
+  text-shadow: var(--logo-shadow);
 }
 
 .logo.small {
@@ -58,10 +71,26 @@ h2 {
   margin: 0;
 }
 
+/* Cards and panels sit on the themed background and use the normal text colour. */
+.score-table,
+.dialog,
+.player-row,
+.score-chip,
+.ranking li,
+.theme-card,
+.recent-names,
+.round {
+  color: var(--text);
+}
+
 .error {
+  align-self: flex-start;
   color: var(--error);
   font-weight: 600;
   margin: 0;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: var(--surface);
 }
 
 .row {
@@ -180,6 +209,9 @@ h2 {
   font-size: 1.2rem;
   font-weight: 800;
   white-space: nowrap;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--surface);
 }
 
 .scores {
@@ -265,8 +297,13 @@ h2 {
   gap: 20px;
   padding: 16px;
   border-radius: var(--radius);
-  background: var(--surface);
-  border: 2px solid var(--border);
+  background: var(--table-bg);
+  border: var(--table-border);
+}
+
+.dice-area,
+.dice-area .hint {
+  color: var(--table-text);
 }
 
 .dice {
@@ -501,7 +538,8 @@ h2 {
 /* End */
 .winner-headline {
   font-size: 2rem;
-  color: var(--primary);
+  color: var(--logo);
+  text-shadow: var(--logo-shadow);
 }
 
 .ranking {
@@ -546,6 +584,9 @@ h2 {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .button.chip {
@@ -669,4 +710,72 @@ h2 {
   to {
     transform: translateX(10px) rotate(1deg);
   }
+}
+
+/* Start: theme cards */
+.theme-picker {
+  border: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.theme-picker legend {
+  width: 100%;
+  margin-bottom: 12px;
+  font-weight: 800;
+  font-size: 1.3rem;
+}
+
+.theme-card {
+  width: 220px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 4px solid var(--border);
+  border-radius: 24px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.theme-card:hover {
+  transform: translateY(-3px);
+}
+
+.theme-card[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--primary);
+}
+
+.theme-card[aria-pressed='true'] .theme-name::before {
+  content: '✓ ';
+}
+
+.theme-emoji {
+  font-size: 3rem;
+}
+
+/* Each card shows a little of its own theme, whatever theme is active. */
+.theme-card[data-theme-card='voetbal'] {
+  background: repeating-linear-gradient(90deg, #2f9e44 0 28px, #37b24d 28px 56px);
+  color: #fff;
+  text-shadow: 0 2px 3px rgb(0 0 0 / 0.5);
+}
+
+.theme-card[data-theme-card='snoep'] {
+  background:
+    radial-gradient(circle at 20% 30%, #ffd43b 0 4px, transparent 5px),
+    radial-gradient(circle at 70% 20%, #74c0fc 0 4px, transparent 5px),
+    radial-gradient(circle at 80% 75%, #b197fc 0 4px, transparent 5px),
+    radial-gradient(circle at 30% 80%, #63e6be 0 4px, transparent 5px), #ffdeeb;
+  color: #862e5c;
 }
