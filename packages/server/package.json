@@ -1,0 +1,7 @@
+{
+  "name": "@yahtzee/server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Fastify + Socket.IO + SQLite server (set up in milestones 2, 3 and 5)",
+  "type": "module"
+}

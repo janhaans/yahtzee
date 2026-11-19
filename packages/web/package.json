@@ -1,0 +1,13 @@
+{
+  "name": "@yahtzee/web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "React app: game table, player view and History Dashboard (set up in milestone 2)",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@yahtzee/game-logic": "*"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@yahtzee/game-logic",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pure Yahtzee scoring and game rules (no UI, no I/O)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

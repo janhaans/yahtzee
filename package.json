@@ -1,0 +1,34 @@
+{
+  "name": "yahtzee-party",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Dutch, kid-friendly Yahtzee for 2 to 4 players on the home network",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "echo 'npm run dev is added in milestone 2' && exit 1",
+    "start": "echo 'npm start is added in milestone 2' && exit 1",
+    "test": "vitest run --coverage",
+    "test:e2e": "echo 'Playwright tests are added in milestone 2' && exit 1",
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "format": "prettier --write .",
+    "test:watch": "vitest",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^5.1.1",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.10.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0",
+    "vitest": "^5.1.1"
+  }
+}
