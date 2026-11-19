@@ -195,6 +195,42 @@ describe('chooseBox', () => {
     expect(scores(after)).toEqual([170, 0]);
   });
 
+  it('gives no bonus for a second Yahtzee with 0 in the Yahtzee box', () => {
+    const state: GameState = {
+      ...newGame(),
+      scorecards: [card({ yahtzee: 0 }), card()],
+      dice: dice(4, 4, 4, 4, 4),
+      rollsUsed: 1,
+    };
+    expect(errorOf(chooseBox(state, 'chance'))).toBe('box_not_allowed');
+    const after = unwrap(chooseBox(state, 'fours'));
+    expect(after.scorecards[0]?.boxes.fours).toBe(20);
+    expect(after.scorecards[0]?.yahtzeeBonusCount).toBe(0);
+    expect(scores(after)).toEqual([20, 0]);
+  });
+
+  it.each([
+    ['fullHouse', 50, 25, 1],
+    ['smallStraight', 50, 30, 1],
+    ['largeStraight', 50, 40, 1],
+    ['fullHouse', 0, 25, 0],
+    ['smallStraight', 0, 30, 0],
+    ['largeStraight', 0, 40, 0],
+  ] as const)(
+    'scores %s as Joker for full value with %i in the Yahtzee box',
+    (box, yahtzeeBox, points, bonusCount) => {
+      const state: GameState = {
+        ...newGame(),
+        scorecards: [card({ yahtzee: yahtzeeBox, fours: 12 }), card()],
+        dice: dice(4, 4, 4, 4, 4),
+        rollsUsed: 1,
+      };
+      const after = unwrap(chooseBox(state, box));
+      expect(after.scorecards[0]?.boxes[box]).toBe(points);
+      expect(after.scorecards[0]?.yahtzeeBonusCount).toBe(bonusCount);
+    },
+  );
+
   it('rejects choosing after the game is over', () => {
     const aborted = unwrap(abortGame(unwrap(roll(newGame(), fixedRng(4)))));
     expect(errorOf(chooseBox(aborted, 'chance'))).toBe('game_over');
