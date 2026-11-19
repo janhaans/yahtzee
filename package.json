@@ -11,10 +11,10 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "echo 'npm run dev is added in milestone 2' && exit 1",
-    "start": "echo 'npm start is added in milestone 2' && exit 1",
+    "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w @yahtzee/server\" \"npm run dev -w @yahtzee/web\"",
+    "start": "npm run build -w @yahtzee/web && npm run start -w @yahtzee/server",
     "test": "vitest run --coverage",
-    "test:e2e": "echo 'Playwright tests are added in milestone 2' && exit 1",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "format": "prettier --write .",
@@ -23,7 +23,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
     "@vitest/coverage-v8": "^5.1.1",
+    "concurrently": "^10.0.7",
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.10.1",

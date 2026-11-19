@@ -2,6 +2,25 @@
   "name": "@yahtzee/server",
   "private": true,
   "version": "0.1.0",
-  "description": "Fastify + Socket.IO + SQLite server (set up in milestones 2, 3 and 5)",
-  "type": "module"
+  "description": "Fastify + Socket.IO server that owns the game state (SQLite history follows in milestone 3)",
+  "type": "module",
+  "exports": {
+    "./protocol": "./src/protocol.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "NODE_ENV=production tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/static": "^10.1.11",
+    "@yahtzee/game-logic": "*",
+    "fastify": "^5.12.8",
+    "socket.io": "^4.8.4",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "socket.io-client": "^4.8.4"
+  }
 }

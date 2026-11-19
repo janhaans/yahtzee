@@ -52,4 +52,5 @@ follow it. If something in the PRD is unclear or conflicts, ask before guessing.
 - `npm run dev` – start server and web app for development
 - `npm start` – start for playing (listens on the home network)
 - `npm test` – run all unit tests
-- `npm run test:e2e` – run Playwright tests
+- `npm run test:e2e` – run Playwright tests (first time: `npx playwright install chromium`)
+- `npm run typecheck`, `npm run lint`, `npm run format` – checks and formatting

@@ -71,6 +71,14 @@ describe('createGame', () => {
     expect(errorOf(createGame([player('a', 'Emma'), player('b', ' emma ')]))).toBe(
       'duplicate_name',
     );
+    expect(errorOf(createGame([player('a', 'Anna  Sophie'), player('b', 'ANNA SOPHIE')]))).toBe(
+      'duplicate_name',
+    );
+  });
+
+  it('collapses extra spaces inside names', () => {
+    const state = unwrap(createGame([player('a', ' Anna \t  Sophie '), player('b', 'Sara')]));
+    expect(state.players[0]?.name).toBe('Anna Sophie');
   });
 
   it('trims names and keeps the player type', () => {
