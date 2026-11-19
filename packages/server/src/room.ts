@@ -16,21 +16,35 @@ import {
   type SetupError,
 } from '@yahtzee/game-logic';
 import type { GameHistory, GameRecord, SavedGame, TurnRecord } from './history/store.js';
+import {
+  DEFAULT_THEME,
+  isAvatar,
+  isColour,
+  isTheme,
+  type GameSetup,
+  type NewPlayer,
+  type ThemeId,
+} from './looks.js';
 import type { ActionError, ActionResult, UnfinishedGame } from './protocol.js';
 
-/** Avatar and colour per seat, until players can pick their own in milestone 4. */
-const DEFAULT_LOOKS = [
-  { avatar: 'cupcake', colour: '#e8457c' },
-  { avatar: 'football', colour: '#2e8b57' },
-  { avatar: 'lollipop', colour: '#7b4fd6' },
-  { avatar: 'trophy', colour: '#e08a00' },
-] as const;
+const MAX_PLAYERS_IN_PAYLOAD = 10;
 
-const MAX_NAMES = 10;
-
-function isNameList(value: unknown): value is string[] {
+/** Checks the shape of a setup from the network. The game rules check names and counts. */
+function isGameSetup(value: unknown): value is GameSetup {
+  if (typeof value !== 'object' || value === null) return false;
+  const { players, theme } = value as Record<string, unknown>;
   return (
-    Array.isArray(value) && value.length <= MAX_NAMES && value.every((n) => typeof n === 'string')
+    isTheme(theme) &&
+    Array.isArray(players) &&
+    players.length <= MAX_PLAYERS_IN_PAYLOAD &&
+    players.every(
+      (p: unknown) =>
+        typeof p === 'object' &&
+        p !== null &&
+        typeof (p as NewPlayer).name === 'string' &&
+        isAvatar((p as NewPlayer).avatar) &&
+        isColour((p as NewPlayer).colour),
+    )
   );
 }
 
@@ -48,6 +62,7 @@ export interface RoomOptions {
 /** History bookkeeping for the game on the table. */
 interface CurrentGame {
   readonly id: string;
+  readonly theme: ThemeId;
   /** Null until the first roll: only then does the game go into the history. */
   startedAt: string | null;
   turnRolls: Dice[];
@@ -90,6 +105,11 @@ export class GameRoom {
     return this.#state;
   }
 
+  /** The theme of the game on the table, or null when there is none. */
+  get theme(): ThemeId | null {
+    return this.#game?.theme ?? null;
+  }
+
   /** The game that was still being played when the server stopped, until someone chooses. */
   get unfinished(): UnfinishedGame | null {
     const saved = this.#unfinished;
@@ -102,24 +122,29 @@ export class GameRoom {
     return this.#pending.size > 0;
   }
 
-  create(names: unknown): ActionResult {
+  create(setup: unknown): ActionResult {
     if (this.#unfinished) return fail('unfinished_game');
     if (this.#state?.status === 'in_progress') return fail('game_in_progress');
-    if (!isNameList(names)) return fail('invalid_input');
+    if (!isGameSetup(setup)) return fail('invalid_input');
 
-    const players: Player[] = names.map((name, i) => ({
+    const players: Player[] = setup.players.map(({ name, avatar, colour }) => ({
       id: this.#newId(),
       name,
-      ...DEFAULT_LOOKS[i % DEFAULT_LOOKS.length]!,
+      avatar,
+      colour,
       type: 'human',
     }));
-    return this.#begin(createGame(players));
+    const result = createGame(players);
+    if (result.ok && new Set(players.map((p) => p.colour)).size !== players.length) {
+      return fail('duplicate_colour');
+    }
+    return this.#begin(result, setup.theme);
   }
 
   rematch(): ActionResult {
     if (this.#state === null) return fail('no_game');
     if (this.#state.status !== 'finished') return fail('game_not_finished');
-    return this.#begin(createGame(this.#state.players));
+    return this.#begin(createGame(this.#state.players), this.#game!.theme);
   }
 
   resume(): ActionResult {
@@ -129,6 +154,7 @@ export class GameRoom {
     this.#state = saved.state;
     this.#game = {
       id: saved.id,
+      theme: isTheme(saved.theme) ? saved.theme : DEFAULT_THEME,
       startedAt: saved.startedAt,
       turnRolls: [...saved.turnRolls],
       unsavedTurns: [],
@@ -147,7 +173,7 @@ export class GameRoom {
       startedAt: saved.startedAt,
       savedAt: saved.savedAt,
       endedAt: saved.savedAt,
-      theme: null,
+      theme: saved.theme,
       turnRolls: [],
       turns: [],
     });
@@ -203,10 +229,10 @@ export class GameRoom {
     return this.#move(abortGame);
   }
 
-  #begin(result: Result<SetupError>): ActionResult {
+  #begin(result: Result<SetupError>, theme: ThemeId): ActionResult {
     if (!result.ok) return fail(result.error);
     this.#state = result.state;
-    this.#game = { id: this.#newId(), startedAt: null, turnRolls: [], unsavedTurns: [] };
+    this.#game = { id: this.#newId(), theme, startedAt: null, turnRolls: [], unsavedTurns: [] };
     return { ok: true };
   }
 
@@ -241,7 +267,7 @@ export class GameRoom {
         startedAt: game.startedAt,
         savedAt: at,
         endedAt: state.status === 'in_progress' ? null : at,
-        theme: null,
+        theme: game.theme,
         turnRolls: [...game.turnRolls],
         turns: [...game.unsavedTurns],
       });

@@ -16,7 +16,7 @@ import type {
 } from '../src/protocol.js';
 import { seededRng } from '../src/rng.js';
 import { GameRoom } from '../src/room.js';
-import { FlakyHistory, always, memoryHistory, playTurn, ticking } from './helpers.js';
+import { FlakyHistory, always, lineup, memoryHistory, playTurn, ticking } from './helpers.js';
 
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -64,7 +64,7 @@ describe('socket server', () => {
     const b = await join(url);
     expect(a.states).toEqual([null]);
 
-    const result = await a.client.emitWithAck('game:create', { names: ['Emma', 'Sara'] });
+    const result = await a.client.emitWithAck('game:create', lineup(['Emma', 'Sara']));
     expect(result).toEqual({ ok: true });
     await expect.poll(() => b.states.length).toBe(2);
     expect(b.states[1]?.players.map((p) => p.name)).toEqual(['Emma', 'Sara']);
@@ -76,7 +76,7 @@ describe('socket server', () => {
   it('answers bad intentions with an error and does not broadcast', async () => {
     const url = await start();
     const a = await join(url);
-    await a.client.emitWithAck('game:create', { names: ['Emma', 'Sara'] });
+    await a.client.emitWithAck('game:create', lineup(['Emma', 'Sara']));
     await a.client.emitWithAck('game:roll');
     await expect.poll(() => a.states.length).toBe(3);
 
@@ -87,17 +87,27 @@ describe('socket server', () => {
     });
     expect(await send('game:chooseBox', null)).toEqual({ ok: false, error: 'invalid_input' });
     expect(await send('game:toggleHold', 'x')).toEqual({ ok: false, error: 'invalid_input' });
-    expect(await send('game:create', { names: ['Noor', 'Lieke'] })).toEqual({
+    expect(await send('game:create', lineup(['Noor', 'Lieke']))).toEqual({
       ok: false,
       error: 'game_in_progress',
     });
     expect(a.states.length).toBe(3);
   });
 
+  it('sends the theme of the game before its state', async () => {
+    const url = await start();
+    const a = await join(url);
+    const events: string[] = [];
+    a.client.on('game:theme', (theme) => events.push(`theme:${theme}`));
+    a.client.on('game:state', (state) => events.push(`state:${state?.status}`));
+    await a.client.emitWithAck('game:create', lineup(['Emma', 'Sara'], 'snoep'));
+    await expect.poll(() => events).toEqual(['theme:snoep', 'state:in_progress']);
+  });
+
   it('survives intentions sent without an acknowledgement callback', async () => {
     const url = await start();
     const a = await join(url);
-    a.client.emit('game:create', { names: ['Emma', 'Sara'] } as never, undefined as never);
+    a.client.emit('game:create', lineup(['Emma', 'Sara']) as never, undefined as never);
     await expect.poll(() => a.states.length).toBe(2);
     expect(app!.room.state?.status).toBe('in_progress');
   });
@@ -135,7 +145,7 @@ describe('unfinished game after a restart', () => {
 
     let url = await startOnFile(path);
     const first = await join(url);
-    await first.client.emitWithAck('game:create', { names: ['Emma', 'Sara'] });
+    await first.client.emitWithAck('game:create', lineup(['Emma', 'Sara']));
     await first.client.emitWithAck('game:roll');
     await first.client.emitWithAck('game:toggleHold', { index: 2 });
     const before = app!.room.state;
@@ -147,7 +157,7 @@ describe('unfinished game after a restart', () => {
     const second = await joinWithUnfinished(url);
     expect(second.unfinished[0]).toMatchObject({ round: 1 });
     expect(second.unfinished[0]!.players.map((p) => p.name)).toEqual(['Emma', 'Sara']);
-    expect(await second.client.emitWithAck('game:create', { names: ['Noor', 'Lieke'] })).toEqual({
+    expect(await second.client.emitWithAck('game:create', lineup(['Noor', 'Lieke']))).toEqual({
       ok: false,
       error: 'unfinished_game',
     });
@@ -162,7 +172,7 @@ describe('unfinished game after a restart', () => {
     const path = joinPath(dir, 'yahtzee.db');
     let url = await startOnFile(path);
     const first = await join(url);
-    await first.client.emitWithAck('game:create', { names: ['Emma', 'Sara'] });
+    await first.client.emitWithAck('game:create', lineup(['Emma', 'Sara']));
     await first.client.emitWithAck('game:roll');
     await stop();
     db!.close();
@@ -187,7 +197,7 @@ describe('save warning', () => {
     client.on('history:saveFailed', (failed) => warnings.push(failed));
     await expect.poll(() => warnings).toEqual([false]);
 
-    await client.emitWithAck('game:create', { names: ['Emma', 'Sara'] });
+    await client.emitWithAck('game:create', lineup(['Emma', 'Sara']));
     flaky.failing = true;
     await client.emitWithAck('game:roll');
     await expect.poll(() => warnings.at(-1)).toBe(true);
@@ -201,12 +211,12 @@ describe('history REST API', () => {
   async function withGames() {
     const history = memoryHistory();
     const room = new GameRoom(always(6), { history, now: ticking() });
-    room.create(['Emma', 'Sara']);
+    room.create(lineup(['Emma', 'Sara']));
     for (let turn = 0; turn < 26; turn++) playTurn(room);
     room.rematch();
     playTurn(room);
     room.abort();
-    room.create(['Noor', 'Emma']);
+    room.create(lineup(['Noor', 'Emma']));
     room.roll();
     await start(history, room);
     return { history, inject: app!.fastify.inject.bind(app!.fastify) };

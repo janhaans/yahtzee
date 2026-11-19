@@ -7,6 +7,7 @@ import type {
   ServerToClientEvents,
   UnfinishedGame,
 } from '@yahtzee/server/protocol';
+import type { GameSetup, ThemeId } from '@yahtzee/server/looks';
 
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -14,7 +15,7 @@ type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 export type ClientResult = ActionResult | { ok: false; error: 'disconnected' };
 
 export interface GameActions {
-  create(names: string[]): Promise<ClientResult>;
+  create(setup: GameSetup): Promise<ClientResult>;
   roll(): Promise<ClientResult>;
   toggleHold(index: number): Promise<ClientResult>;
   chooseBox(box: BoxId): Promise<ClientResult>;
@@ -37,6 +38,8 @@ async function answer(request: Promise<ActionResult>): Promise<ClientResult> {
 export interface GameConnection {
   /** Undefined until the server has sent the first state. */
   readonly state: GameState | null | undefined;
+  /** The theme of the game on the table; null when there is no game. */
+  readonly theme: ThemeId | null;
   readonly connected: boolean;
   /** A game that was still being played when the server stopped, waiting for a choice. */
   readonly unfinished: UnfinishedGame | null;
@@ -49,6 +52,7 @@ export interface GameConnection {
 export function useGame(): GameConnection {
   const socket: GameSocket = useMemo(() => io({ autoConnect: false }), []);
   const [state, setState] = useState<GameState | null | undefined>(undefined);
+  const [theme, setTheme] = useState<ThemeId | null>(null);
   const [connected, setConnected] = useState(false);
   const [unfinished, setUnfinished] = useState<UnfinishedGame | null>(null);
   const [saveFailed, setSaveFailed] = useState(false);
@@ -56,6 +60,7 @@ export function useGame(): GameConnection {
   useEffect(() => {
     socket.on('connect', () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));
+    socket.on('game:theme', setTheme);
     socket.on('game:state', setState);
     socket.on('game:unfinished', setUnfinished);
     socket.on('history:saveFailed', setSaveFailed);
@@ -69,7 +74,7 @@ export function useGame(): GameConnection {
   const actions = useMemo<GameActions>(() => {
     const send = () => socket.timeout(ACK_TIMEOUT_MS);
     return {
-      create: (names) => answer(send().emitWithAck('game:create', { names })),
+      create: (setup) => answer(send().emitWithAck('game:create', setup)),
       roll: () => answer(send().emitWithAck('game:roll')),
       toggleHold: (index) => answer(send().emitWithAck('game:toggleHold', { index })),
       chooseBox: (box) => answer(send().emitWithAck('game:chooseBox', { box })),
@@ -80,5 +85,5 @@ export function useGame(): GameConnection {
     };
   }, [socket]);
 
-  return { state, connected, unfinished, saveFailed, actions };
+  return { state, theme, connected, unfinished, saveFailed, actions };
 }

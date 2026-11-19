@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { MAX_NAME_LENGTH, MAX_PLAYERS, MIN_PLAYERS, nameKey } from '@yahtzee/game-logic';
+import { AVATARS, COLOURS, type GameSetup } from '@yahtzee/server/looks';
 import { nl } from '../i18n/nl';
 import type { ClientResult } from '../useGame';
 
 interface Props {
-  onStart: (names: string[]) => Promise<ClientResult>;
+  onStart: (setup: GameSetup) => Promise<ClientResult>;
   onBack: () => void;
   /** Names from earlier games, most recent first, for quick setup. */
   recentNames?: readonly string[];
@@ -39,7 +40,8 @@ export function SetupScreen({ onStart, onBack, recentNames = [] }: Props) {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     // The server checks the names again; this answer only shows the friendly message.
-    const result = await onStart(names);
+    const players = names.map((name, i) => ({ name, avatar: AVATARS[i]!, colour: COLOURS[i]! }));
+    const result = await onStart({ players, theme: 'voetbal' });
     if (!result.ok) setError(nl.errors[result.error]);
   };
 

@@ -44,6 +44,7 @@ export async function buildApp(options: {
   const io = new Server<ClientToServerEvents, ServerToClientEvents>(fastify.server);
   type Target = Pick<typeof io, 'emit'>;
   const sendAll = (target: Target) => {
+    target.emit('game:theme', room.theme);
     target.emit('game:state', room.state);
     target.emit('game:unfinished', room.unfinished);
     target.emit('history:saveFailed', room.saveFailed);
@@ -65,9 +66,7 @@ export async function buildApp(options: {
         ? (payload as Record<string, unknown>)[key]
         : undefined;
 
-    socket.on('game:create', (payload, ack) =>
-      handle(ack, () => room.create(field(payload, 'names'))),
-    );
+    socket.on('game:create', (payload, ack) => handle(ack, () => room.create(payload)));
     socket.on('game:roll', (ack) => handle(ack, () => room.roll()));
     socket.on('game:toggleHold', (payload, ack) =>
       handle(ack, () => room.toggleHold(field(payload, 'index'))),

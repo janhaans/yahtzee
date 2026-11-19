@@ -1,6 +1,7 @@
 import { allowedBoxes, type DieValue, type Rng } from '@yahtzee/game-logic';
 import { openDatabase } from '../src/history/db.js';
 import { HistoryStore, type GameHistory } from '../src/history/store.js';
+import { AVATARS, COLOURS, type GameSetup, type ThemeId } from '../src/looks.js';
 import { GameRoom } from '../src/room.js';
 
 /** Rng that always rolls the same face. */
@@ -50,4 +51,16 @@ export function playTurn(room: GameRoom): void {
   const state = room.state!;
   const box = allowedBoxes(state.dice!, state.scorecards[state.currentPlayerIndex]!)[0]!;
   if (!room.chooseBox(box).ok) throw new Error('chooseBox failed');
+}
+
+/** A valid game setup for these names, with a different avatar and colour per seat. */
+export function lineup(names: string[], theme: ThemeId = 'voetbal'): GameSetup {
+  return {
+    players: names.map((name, i) => ({
+      name,
+      avatar: AVATARS[i % AVATARS.length]!,
+      colour: COLOURS[i % COLOURS.length]!,
+    })),
+    theme,
+  };
 }

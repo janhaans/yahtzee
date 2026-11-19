@@ -6,6 +6,7 @@ import { GameRoom } from '../src/room.js';
 import {
   FlakyHistory,
   always,
+  lineup,
   memoryHistory,
   newRoom as roomWith,
   playTurn,
@@ -18,7 +19,7 @@ function newRoom(rng: Rng = Math.random): GameRoom {
 
 function started(rng?: Rng, names = ['Emma', 'Sara']): GameRoom {
   const room = newRoom(rng);
-  expect(room.create(names)).toEqual({ ok: true });
+  expect(room.create(lineup(names))).toEqual({ ok: true });
   return room;
 }
 
@@ -31,25 +32,40 @@ describe('GameRoom', () => {
     expect(room.rematch()).toEqual({ ok: false, error: 'no_game' });
   });
 
-  it('creates human players with ids, avatar and colour', () => {
-    const room = started(undefined, ['Emma', 'Sara', 'Noor', 'Lieke']);
+  it('creates human players with ids and the chosen avatar and colour', () => {
+    const room = newRoom();
+    const setup = lineup(['Emma', 'Sara', 'Noor', 'Lieke'], 'snoep');
+    expect(room.create(setup)).toEqual({ ok: true });
     const players = room.state!.players;
     expect(new Set(players.map((p) => p.id)).size).toBe(4);
     expect(players.every((p) => p.type === 'human')).toBe(true);
-    expect(new Set(players.map((p) => p.avatar)).size).toBe(4);
-    expect(new Set(players.map((p) => p.colour)).size).toBe(4);
+    expect(players.map(({ name, avatar, colour }) => ({ name, avatar, colour }))).toEqual(
+      setup.players,
+    );
+    expect(room.theme).toBe('snoep');
+  });
+
+  it('lets players share an avatar but not a colour', () => {
+    const setup = lineup(['Emma', 'Sara']);
+    const sameAvatar = setup.players.map((p) => ({ ...p, avatar: 'unicorn' }));
+    expect(newRoom().create({ ...setup, players: sameAvatar })).toEqual({ ok: true });
+    const sameColour = setup.players.map((p) => ({ ...p, colour: '#e8457c' }));
+    expect(newRoom().create({ ...setup, players: sameColour })).toEqual({
+      ok: false,
+      error: 'duplicate_colour',
+    });
   });
 
   it('only allows 2 to 4 players', () => {
-    expect(newRoom().create(['Emma'])).toEqual({ ok: false, error: 'too_few_players' });
-    expect(newRoom().create(['A', 'B', 'C', 'D', 'E'])).toEqual({
+    expect(newRoom().create(lineup(['Emma']))).toEqual({ ok: false, error: 'too_few_players' });
+    expect(newRoom().create(lineup(['A', 'B', 'C', 'D', 'E']))).toEqual({
       ok: false,
       error: 'too_many_players',
     });
   });
 
   it('rejects duplicate names, ignoring case and extra spaces', () => {
-    expect(newRoom().create(['Anna Sophie', ' anna   SOPHIE '])).toEqual({
+    expect(newRoom().create(lineup(['Anna Sophie', ' anna   SOPHIE ']))).toEqual({
       ok: false,
       error: 'duplicate_name',
     });
@@ -57,19 +73,34 @@ describe('GameRoom', () => {
 
   it('rejects malformed create payloads', () => {
     const room = newRoom();
-    expect(room.create(undefined)).toEqual({ ok: false, error: 'invalid_input' });
-    expect(room.create('Emma')).toEqual({ ok: false, error: 'invalid_input' });
-    expect(room.create(['Emma', 42])).toEqual({ ok: false, error: 'invalid_input' });
-    expect(room.create(Array.from({ length: 11 }, (_, i) => `P${i}`))).toEqual({
-      ok: false,
-      error: 'invalid_input',
-    });
+    const setup = lineup(['Emma', 'Sara']);
+    const [emma, sara] = setup.players;
+    const bad: unknown[] = [
+      undefined,
+      'Emma',
+      ['Emma', 'Sara'],
+      { players: setup.players },
+      { ...setup, theme: 'ruimte' },
+      { ...setup, players: 'Emma' },
+      { ...setup, players: [emma, null] },
+      { ...setup, players: [emma, { ...sara, name: 42 }] },
+      { ...setup, players: [emma, { ...sara, avatar: 'dragon' }] },
+      { ...setup, players: [emma, { ...sara, colour: 'red' }] },
+      lineup(Array.from({ length: 11 }, (_, i) => `P${i}`)),
+    ];
+    for (const payload of bad) {
+      expect(room.create(payload)).toEqual({ ok: false, error: 'invalid_input' });
+    }
     expect(room.state).toBeNull();
+    expect(room.theme).toBeNull();
   });
 
   it('does not start a new game while one is in progress', () => {
     const room = started();
-    expect(room.create(['Noor', 'Lieke'])).toEqual({ ok: false, error: 'game_in_progress' });
+    expect(room.create(lineup(['Noor', 'Lieke']))).toEqual({
+      ok: false,
+      error: 'game_in_progress',
+    });
     expect(room.state!.players[0]!.name).toBe('Emma');
   });
 
@@ -139,6 +170,7 @@ describe('GameRoom', () => {
     const players = room.state!.players;
     expect(room.rematch()).toEqual({ ok: true });
     expect(room.state!.players).toEqual(players);
+    expect(room.theme).toBe('voetbal');
     expect(room.state!.round).toBe(1);
     expect(room.state!.status).toBe('in_progress');
   });
@@ -150,7 +182,7 @@ describe('GameRoom', () => {
     expect(room.state!.status).toBe('aborted');
     expect(room.abort()).toEqual({ ok: false, error: 'game_over' });
     expect(room.rematch()).toEqual({ ok: false, error: 'game_not_finished' });
-    expect(room.create(['Noor', 'Lieke'])).toEqual({ ok: true });
+    expect(room.create(lineup(['Noor', 'Lieke']))).toEqual({ ok: true });
   });
 });
 
@@ -164,7 +196,7 @@ describe('GameRoom history', () => {
 
   it('saves nothing until the first roll', () => {
     const { history, room } = setup();
-    room.create(['Emma', 'Sara']);
+    room.create(lineup(['Emma', 'Sara']));
     expect(history.listGames().total).toBe(0);
     room.abort();
     expect(history.listGames().total).toBe(0);
@@ -173,7 +205,7 @@ describe('GameRoom history', () => {
 
   it('creates the game at the first roll and saves every roll and hold', () => {
     const { history, room } = setup();
-    room.create(['Emma', 'Sara']);
+    room.create(lineup(['Emma', 'Sara']));
     room.roll();
     const [game] = history.listGames().items;
     expect(game).toMatchObject({
@@ -182,7 +214,7 @@ describe('GameRoom history', () => {
       durationSeconds: null,
       status: 'in_progress',
       roundsPlayed: 1,
-      theme: null,
+      theme: 'voetbal',
     });
     expect(game!.players.map((p) => p.name)).toEqual(['Emma', 'Sara']);
 
@@ -192,7 +224,7 @@ describe('GameRoom history', () => {
 
   it('saves the scorecards and the turn after every box', () => {
     const { db, history, room } = setup();
-    room.create(['Emma', 'Sara']);
+    room.create(lineup(['Emma', 'Sara']));
     room.roll();
     room.roll();
     room.chooseBox('threes');
@@ -218,7 +250,7 @@ describe('GameRoom history', () => {
 
   it('saves a finished game with all tied players as winners', () => {
     const { history, room } = setup();
-    room.create(['Emma', 'Sara']);
+    room.create(lineup(['Emma', 'Sara']));
     for (let turn = 0; turn < ROUNDS * 2; turn++) playTurn(room);
 
     const [game] = history.listGames().items;
@@ -232,7 +264,7 @@ describe('GameRoom history', () => {
 
   it('saves an aborted game without a winner, with the round reached', () => {
     const { history, room } = setup();
-    room.create(['Emma', 'Sara']);
+    room.create(lineup(['Emma', 'Sara']));
     playTurn(room);
     playTurn(room);
     playTurn(room);
@@ -245,7 +277,7 @@ describe('GameRoom history', () => {
 
   it('stores a rematch as a new game with the same players', () => {
     const { history, room } = setup();
-    room.create(['Emma', 'Sara']);
+    room.create(lineup(['Emma', 'Sara']));
     for (let turn = 0; turn < ROUNDS * 2; turn++) playTurn(room);
     room.rematch();
     room.roll();
@@ -255,10 +287,10 @@ describe('GameRoom history', () => {
 
   it('recognises a returning player by name, ignoring case and extra spaces', () => {
     const { history, room } = setup();
-    room.create(['Anna Sophie', 'Sara']);
+    room.create(lineup(['Anna Sophie', 'Sara']));
     room.roll();
     room.abort();
-    room.create(['  anna   SOPHIE ', 'Noor']);
+    room.create(lineup(['  anna   SOPHIE ', 'Noor']));
     room.roll();
 
     const players = history.listPlayers();
@@ -271,7 +303,7 @@ describe('GameRoom history', () => {
     const flaky = new FlakyHistory();
     const log = vi.fn();
     const room = new GameRoom(always(2), { history: flaky, now: ticking(), log });
-    room.create(['Emma', 'Sara']);
+    room.create(lineup(['Emma', 'Sara']));
 
     flaky.failing = true;
     expect(room.roll()).toEqual({ ok: true });
@@ -291,7 +323,7 @@ describe('GameRoom history', () => {
   it('saves a game that ended during a failure when the next game starts', () => {
     const flaky = new FlakyHistory();
     const room = roomWith(flaky, always(4));
-    room.create(['Emma', 'Sara']);
+    room.create(lineup(['Emma', 'Sara']));
     playTurn(room);
     flaky.failing = true;
     room.abort();
@@ -299,7 +331,7 @@ describe('GameRoom history', () => {
     expect(flaky.inner.listGames().items[0]!.status).toBe('in_progress');
 
     flaky.failing = false;
-    room.create(['Noor', 'Lieke']);
+    room.create(lineup(['Noor', 'Lieke']));
     expect(room.saveFailed).toBe(true);
     room.roll();
     expect(room.saveFailed).toBe(false);
@@ -313,7 +345,7 @@ describe('GameRoom unfinished game', () => {
   function restarted() {
     const history = memoryHistory();
     const before = roomWith(history, always(5));
-    before.create(['Emma', 'Sara']);
+    before.create(lineup(['Emma', 'Sara'], 'snoep'));
     playTurn(before);
     before.roll();
     before.toggleHold(0);
@@ -329,7 +361,10 @@ describe('GameRoom unfinished game', () => {
       round: 1,
       startedAt: '2026-11-19T18:00:00.000Z',
     });
-    expect(after.create(['Noor', 'Lieke'])).toEqual({ ok: false, error: 'unfinished_game' });
+    expect(after.create(lineup(['Noor', 'Lieke']))).toEqual({
+      ok: false,
+      error: 'unfinished_game',
+    });
   });
 
   it('continues exactly where the game was, with the same dice', () => {
@@ -337,6 +372,7 @@ describe('GameRoom unfinished game', () => {
     expect(after.resume()).toEqual({ ok: true });
     expect(after.unfinished).toBeNull();
     expect(after.state).toEqual(before.state);
+    expect(after.theme).toBe('snoep');
 
     after.chooseBox('fives');
     expect(history.listGames().total).toBe(1);
@@ -351,9 +387,13 @@ describe('GameRoom unfinished game', () => {
     expect(after.unfinished).toBeNull();
     expect(after.state).toBeNull();
     const [game] = history.listGames().items;
-    expect(game).toMatchObject({ status: 'aborted', endedAt: '2026-11-19T18:03:00.000Z' });
+    expect(game).toMatchObject({
+      status: 'aborted',
+      endedAt: '2026-11-19T18:03:00.000Z',
+      theme: 'snoep',
+    });
     expect(after.discardUnfinished()).toEqual({ ok: false, error: 'no_unfinished_game' });
-    expect(after.create(['Noor', 'Lieke'])).toEqual({ ok: true });
+    expect(after.create(lineup(['Noor', 'Lieke']))).toEqual({ ok: true });
   });
 
   it('keeps trying to save a stopped unfinished game', () => {
@@ -364,10 +404,18 @@ describe('GameRoom unfinished game', () => {
     room.discardUnfinished();
     expect(room.saveFailed).toBe(true);
     flaky.failing = false;
-    room.create(['Noor', 'Lieke']);
+    room.create(lineup(['Noor', 'Lieke']));
     room.roll();
     expect(room.saveFailed).toBe(false);
     expect(history.listGames({ status: 'aborted' }).total).toBe(1);
+  });
+
+  it('continues an old game without a theme in the default theme', () => {
+    const { history } = restarted();
+    const saved = history.findUnfinished()!;
+    const room = roomWith({ save: () => {}, findUnfinished: () => ({ ...saved, theme: null }) });
+    expect(room.resume()).toEqual({ ok: true });
+    expect(room.theme).toBe('voetbal');
   });
 
   it('starts normally when the history cannot be read', () => {
@@ -382,7 +430,7 @@ describe('GameRoom unfinished game', () => {
       log,
     });
     expect(room.unfinished).toBeNull();
-    expect(room.create(['Emma', 'Sara'])).toEqual({ ok: true });
+    expect(room.create(lineup(['Emma', 'Sara']))).toEqual({ ok: true });
     expect(log).toHaveBeenCalled();
   });
 });

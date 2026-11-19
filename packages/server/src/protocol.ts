@@ -1,4 +1,5 @@
 import type { GameState, MoveError, Player, SetupError } from '@yahtzee/game-logic';
+import type { GameSetup, ThemeId } from './looks.js';
 
 /**
  * Socket.IO events between the clients and the server. Clients only send intentions;
@@ -12,6 +13,7 @@ export type ActionError =
   | 'game_in_progress'
   | 'game_not_finished'
   | 'invalid_input'
+  | 'duplicate_colour'
   | 'unfinished_game'
   | 'no_unfinished_game';
 
@@ -28,8 +30,8 @@ export interface UnfinishedGame {
 }
 
 export interface ClientToServerEvents {
-  /** Start a new game. Names are in playing order; the server fills in the rest. */
-  'game:create': (payload: { names: string[] }, ack: Ack) => void;
+  /** Start a new game. Players are in playing order; the server adds ids and types. */
+  'game:create': (payload: GameSetup, ack: Ack) => void;
   'game:roll': (ack: Ack) => void;
   'game:toggleHold': (payload: { index: number }, ack: Ack) => void;
   'game:chooseBox': (payload: { box: string }, ack: Ack) => void;
@@ -45,6 +47,8 @@ export interface ClientToServerEvents {
 export interface ServerToClientEvents {
   /** The full game state, sent on connect and after every change. Null when there is no game. */
   'game:state': (state: GameState | null) => void;
+  /** The theme of the game on the table, sent before its state. Null when there is no game. */
+  'game:theme': (theme: ThemeId | null) => void;
   /** The unfinished game waiting for a choice (continue or stop), or null. */
   'game:unfinished': (game: UnfinishedGame | null) => void;
   /** True while a save to the history failed; it is tried again after the next turn. */

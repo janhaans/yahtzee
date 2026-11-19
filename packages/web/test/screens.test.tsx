@@ -18,6 +18,7 @@ import { SetupScreen } from '../src/components/SetupScreen';
 import { UnfinishedDialog } from '../src/components/UnfinishedDialog';
 import { fetchRecentNames } from '../src/api';
 import { formatDateTime } from '../src/format';
+import type { GameSetup } from '@yahtzee/server/looks';
 import type { GameActions } from '../src/useGame';
 
 afterEach(cleanup);
@@ -35,6 +36,12 @@ function gameWith(dice: Dice, first: Scorecard = card()): GameState {
   const result = createGame(players);
   if (!result.ok) throw new Error(result.error);
   return { ...result.state, dice, rollsUsed: 1, scorecards: [first, card()] };
+}
+
+/** The player names of the last game setup passed to this mock. */
+function names(onStart: { mock: { calls: unknown[][] } }): string[] {
+  const setup = onStart.mock.calls.at(-1)![0] as GameSetup;
+  return setup.players.map((p) => p.name);
 }
 
 function fakeActions(): GameActions {
@@ -146,7 +153,7 @@ describe('SetupScreen', () => {
     await userEvent.type(second!, ' emma ');
     await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
 
-    expect(onStart).toHaveBeenCalledWith(['Emma', ' emma ']);
+    expect(names(onStart)).toEqual(['Emma', ' emma ']);
     expect(screen.getByRole('alert')).toHaveTextContent('dezelfde naam');
   });
 
@@ -171,7 +178,7 @@ describe('SetupScreen recent names', () => {
     expect(screen.queryByRole('button', { name: 'Sara meedoen' })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Emma meedoen' }));
     await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
-    expect(onStart).toHaveBeenCalledWith(['Sara', 'Emma']);
+    expect(names(onStart)).toEqual(['Sara', 'Emma']);
   });
 
   it('matches names ignoring case and extra spaces, and hides when every field is full', async () => {

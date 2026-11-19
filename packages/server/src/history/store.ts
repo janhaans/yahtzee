@@ -60,6 +60,7 @@ export interface SavedGame {
   readonly state: GameState;
   readonly startedAt: string;
   readonly savedAt: string;
+  readonly theme: string | null;
   readonly turnRolls: readonly Dice[];
 }
 
@@ -317,10 +318,16 @@ export class HistoryStore implements GameHistory {
   findUnfinished(): SavedGame | null {
     const rows = this.#db
       .prepare(
-        `SELECT id, started_at, last_saved_at, state_json FROM games
+        `SELECT id, started_at, last_saved_at, theme, state_json FROM games
          WHERE status = 'in_progress' ORDER BY last_saved_at DESC`,
       )
-      .all() as { id: string; started_at: string; last_saved_at: string; state_json: string }[];
+      .all() as {
+      id: string;
+      started_at: string;
+      last_saved_at: string;
+      theme: string | null;
+      state_json: string;
+    }[];
     const abort = this.#db.prepare(
       `UPDATE games SET status = 'aborted', ended_at = last_saved_at WHERE id = ?`,
     );
@@ -335,6 +342,7 @@ export class HistoryStore implements GameHistory {
             state: snapshot.state,
             startedAt: row.started_at,
             savedAt: row.last_saved_at,
+            theme: row.theme,
             turnRolls: snapshot.turnRolls,
           };
         } else {

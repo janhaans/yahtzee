@@ -191,6 +191,7 @@ export const nl = {
     game_in_progress: 'Er wordt al een spel gespeeld.',
     game_not_finished: 'Het spel is nog niet klaar.',
     invalid_input: 'Er ging iets mis. Probeer het nog eens.',
+    duplicate_colour: 'Twee spelers hebben dezelfde kleur. Kies voor iedereen een eigen kleur!',
     unfinished_game:
       'Er staat nog een onafgemaakt spel klaar. Kies eerst: verder spelen of stoppen.',
     no_unfinished_game: 'Er is al gekozen wat er met het oude spel gebeurt.',
