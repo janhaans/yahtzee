@@ -49,6 +49,11 @@ function fail<E>(error: E): Result<E> {
   return { ok: false, error };
 }
 
+/** Trims a name and collapses runs of whitespace inside it to one space. */
+export function normalizeName(name: string): string {
+  return name.trim().replace(/\s+/g, ' ');
+}
+
 function validatePlayers(players: readonly Player[]): SetupError | null {
   if (players.length < MIN_PLAYERS) return 'too_few_players';
   if (players.length > MAX_PLAYERS) return 'too_many_players';
@@ -56,7 +61,7 @@ function validatePlayers(players: readonly Player[]): SetupError | null {
 
   const names = new Set<string>();
   for (const player of players) {
-    const name = player.name.trim();
+    const name = normalizeName(player.name);
     if (name.length === 0) return 'name_required';
     if (name.length > MAX_NAME_LENGTH) return 'name_too_long';
     const key = name.toLocaleLowerCase('nl');
@@ -66,13 +71,16 @@ function validatePlayers(players: readonly Player[]): SetupError | null {
   return null;
 }
 
-/** Starts a game with 2 to 4 players. Names are trimmed and must be unique (ignoring case). */
+/**
+ * Starts a game with 2 to 4 players. Names are normalized (see normalizeName) and must be
+ * unique, ignoring upper/lower case.
+ */
 export function createGame(players: readonly Player[]): Result<SetupError> {
   const error = validatePlayers(players);
   if (error) return fail(error);
 
   return ok({
-    players: players.map((player) => ({ ...player, name: player.name.trim() })),
+    players: players.map((player) => ({ ...player, name: normalizeName(player.name) })),
     scorecards: players.map(() => emptyScorecard()),
     currentPlayerIndex: 0,
     round: 1,
