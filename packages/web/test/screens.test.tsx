@@ -23,6 +23,13 @@ import type { GameActions } from '../src/useGame';
 
 afterEach(cleanup);
 
+// Confetti needs a real canvas; here it only has to be asked for.
+vi.mock('../src/celebrate/confetti', () => ({
+  celebrateWinner: vi.fn(() => () => {}),
+  celebrateYahtzee: vi.fn(() => () => {}),
+  stopConfetti: vi.fn(),
+}));
+
 const players: Player[] = [
   { id: 'a', name: 'Emma', avatar: 'cupcake', colour: '#e8457c', type: 'human' },
   { id: 'b', name: 'Sara', avatar: 'football', colour: '#2e8b57', type: 'human' },
@@ -406,6 +413,27 @@ describe('EndScreen', () => {
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
       'Gelijkspel! Emma en Sara winnen samen!',
     );
-    expect(screen.getAllByText(/🏆$/)).toHaveLength(2);
+    // Both stand on the highest step of the podium.
+    expect(screen.getByRole('listitem', { name: /^Plek 1: Emma/ })).toBeVisible();
+    expect(screen.getByRole('listitem', { name: /^Plek 1: Sara/ })).toBeVisible();
+  });
+
+  it('puts everybody on the podium with a theme title and throws a party', async () => {
+    const { celebrateWinner } = await import('../src/celebrate/confetti');
+    render(
+      <EndScreen
+        state={finished(20, 25)}
+        theme="snoep"
+        onRematch={() => {}}
+        onNewGame={() => {}}
+      />,
+    );
+    const podium = screen.getAllByRole('listitem').filter((li) => li.closest('.podium'));
+    expect(podium.map((li) => li.getAttribute('aria-label'))).toEqual([
+      'Plek 1: Sara, 25 punten, Snoepkampioen',
+      'Plek 2: Emma, 20 punten, Lekkerbek',
+    ]);
+    expect(podium[0]).toHaveClass('winner');
+    expect(celebrateWinner).toHaveBeenCalledWith('snoep');
   });
 });

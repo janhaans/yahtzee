@@ -261,6 +261,38 @@ export const nl = {
     },
   } satisfies Record<ThemeId, Record<MessageKind, readonly string[]>>,
 
+  /** Titles at the winner party. Gender-neutral, because everybody plays. */
+  titles: {
+    voetbal: {
+      winner: 'Speler van de wedstrijd',
+      yahtzee: 'Hattrick-held',
+      bonus: 'Bonusjager',
+      bestBox: 'Topscorer',
+      bravest: 'Durfal van het veld',
+      extra: ['Teamspeler', 'Supporter van het jaar', 'Talent van de toekomst'],
+    },
+    snoep: {
+      winner: 'Snoepkampioen',
+      yahtzee: 'Jackpot-snoeper',
+      bonus: 'Toetjesjager',
+      bestBox: 'Lekkerbek',
+      bravest: 'Zuurtjesheld',
+      extra: ['Lollyliefhebber', 'Chocoladefan', 'Snoepproever'],
+    },
+  } satisfies Record<
+    ThemeId,
+    Record<'winner' | 'yahtzee' | 'bonus' | 'bestBox' | 'bravest', string> & {
+      extra: readonly string[];
+    }
+  >,
+
+  celebrate: {
+    yahtzee: 'YAHTZEE!!!',
+    goal: 'GOOOAL!',
+    sweets: 'Het regent snoep!',
+    skip: 'Tik om verder te gaan',
+  },
+
   sound: {
     turnOn: 'Geluid aan',
     turnOff: 'Geluid uit',
@@ -316,6 +348,7 @@ export const nl = {
 
   end: {
     title: 'Het spel is klaar!',
+    place: (place: number) => `Plek ${place}`,
     winner: (name: string) => `${name} wint! Gefeliciteerd!`,
     tie: (names: string) => `Gelijkspel! ${names} winnen samen!`,
     and: 'en',

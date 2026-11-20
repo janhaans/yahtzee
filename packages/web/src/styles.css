@@ -563,6 +563,214 @@ h2 {
   font-weight: 700;
 }
 
+/* Winner party: a podium with a block per player, 1st in the middle and highest. */
+.ranking.podium {
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.ranking.podium li {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 8px 0;
+  border: none;
+  border-radius: 16px 16px 0 0;
+  background: var(--surface);
+  text-align: center;
+}
+
+.podium .avatar {
+  font-size: 3rem;
+}
+
+.podium .winner .avatar {
+  font-size: 4.2rem;
+  animation: winner-dance 0.9s ease-in-out infinite;
+}
+
+.podium .name {
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podium .points {
+  font-weight: 800;
+}
+
+.podium .title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.podium .step {
+  align-self: stretch;
+  margin: 8px -8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 2rem;
+  text-shadow: 0 2px 3px rgb(0 0 0 / 0.35);
+  border-radius: 8px 8px 0 0;
+}
+
+.podium .step-1 {
+  height: 150px;
+}
+
+.podium .step-2 {
+  height: 110px;
+}
+
+.podium .step-3 {
+  height: 80px;
+}
+
+.podium .step-4 {
+  height: 56px;
+}
+
+.podium .trophy {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+@keyframes winner-dance {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  25% {
+    transform: translateY(-14px) rotate(-12deg);
+  }
+  50% {
+    transform: translateY(0) rotate(0) scale(1.1);
+  }
+  75% {
+    transform: translateY(-14px) rotate(12deg);
+  }
+}
+
+/* Yahtzee celebration */
+.celebration {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.35);
+  cursor: pointer;
+  animation: overlay-fade 3.2s ease-in-out forwards;
+}
+
+.celebration.calm {
+  pointer-events: none;
+  animation: none;
+}
+
+.yahtzee-text {
+  margin: 0;
+  font-family: var(--heading-font);
+  font-size: clamp(3rem, 12vw, 8rem);
+  font-weight: 900;
+  color: var(--accent);
+  -webkit-text-stroke: 4px var(--primary);
+  text-shadow:
+    0 8px 0 var(--primary),
+    0 16px 30px rgb(0 0 0 / 0.4);
+  animation: yahtzee-pop 0.8s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.celebration-sub {
+  margin: 8px 0 0;
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 3px 6px rgb(0 0 0 / 0.5);
+  animation: yahtzee-pop 0.6s 0.9s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.celebration-skip {
+  margin: 24px 0 0;
+  color: #fff;
+  font-weight: 700;
+}
+
+.celebration.calm .yahtzee-text,
+.celebration.calm .celebration-sub {
+  animation: none;
+}
+
+@keyframes yahtzee-pop {
+  0% {
+    transform: scale(0) rotate(-15deg);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) rotate(-3deg);
+    opacity: 1;
+  }
+}
+
+/* The goal: posts and a net drawn in CSS; the ball flies in from the bottom left. */
+.goal {
+  position: relative;
+  width: 300px;
+  height: 130px;
+  margin-bottom: 8px;
+  border: 8px solid #fff;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+}
+
+.net {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 0.55) 0 2px, transparent 2px 16px),
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.55) 0 2px, transparent 2px 16px);
+  animation: net-bulge 0.4s 0.75s ease-out;
+}
+
+.ball {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  font-size: 3rem;
+  animation: ball-shot 0.8s cubic-bezier(0.3, 0.6, 0.4, 1) both;
+}
+
+@keyframes ball-shot {
+  0% {
+    transform: translate(-60vw, 70vh) scale(2.5) rotate(0);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1) rotate(720deg);
+  }
+}
+
+@keyframes net-bulge {
+  50% {
+    transform: scale(1.06, 0.94);
+  }
+}
+
 .connection-banner {
   margin: 0;
   padding: 10px 16px;

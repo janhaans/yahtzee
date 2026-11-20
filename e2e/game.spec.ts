@@ -71,6 +71,9 @@ test('two players play a full game of 13 rounds', async ({ page }) => {
     await expect(headline).toContainText(`${best[0]} wint!`);
   }
 
+  // Everybody stands on the podium with a fun title.
+  await expect(page.locator('.podium .title')).toHaveCount(2);
+
   // Every box of both players is filled in on the final scorecard.
   await expect(page.locator('.score-table tbody .filled')).toHaveCount(26);
 

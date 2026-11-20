@@ -69,6 +69,7 @@ export function App() {
     screen = (
       <EndScreen
         state={state}
+        theme={theme}
         onRematch={() => void actions.rematch()}
         onNewGame={() => setView('setup')}
       />

@@ -15,10 +15,17 @@ import {
   type Result,
 } from '@yahtzee/game-logic';
 import { THEMES } from '@yahtzee/server/looks';
-import { FunLayer } from '../src/components/FunLayer';
+import { DICE_LAND_MS, FunLayer } from '../src/components/FunLayer';
+import { playerTitles } from '../src/fun/titles';
 import { gameEvents } from '../src/fun/events';
 import { MESSAGE_KINDS, MessagePicker, messageKind } from '../src/fun/messages';
 import { nl } from '../src/i18n/nl';
+
+vi.mock('../src/celebrate/confetti', () => ({
+  celebrateWinner: vi.fn(() => () => {}),
+  celebrateYahtzee: vi.fn(() => () => {}),
+  stopConfetti: vi.fn(),
+}));
 
 afterEach(() => {
   cleanup();
@@ -238,16 +245,42 @@ describe('FunLayer', () => {
     expect(screen.queryByText('Sara is aan de beurt!')).toBeNull();
   });
 
-  it('shows a theme message after scoring and after rolling a Yahtzee', () => {
+  it('shows a theme message after scoring', () => {
     const { start, show } = setup();
     show(start);
     const rolled = ok(roll(start, always(3)));
     show(rolled);
-    expect(nl.messages.voetbal.yahtzee).toContain(screen.getByRole('status').textContent);
     show(ok(chooseBox(rolled, 'chance')));
     expect(nl.messages.voetbal.good).toContain(screen.getByRole('status').textContent);
     act(() => vi.advanceTimersByTime(4000));
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
+  });
+
+  it('celebrates a Yahtzee once the dice have landed; a tap ends it', async () => {
+    const { celebrateYahtzee } = await import('../src/celebrate/confetti');
+    const { start, show } = setup();
+    show(start);
+    act(() => vi.advanceTimersByTime(2000));
+    show(ok(roll(start, always(6))));
+    expect(screen.queryByText('YAHTZEE!!!')).toBeNull();
+    act(() => vi.advanceTimersByTime(DICE_LAND_MS));
+    expect(screen.getByText('YAHTZEE!!!')).toBeVisible();
+    expect(screen.getByText('GOOOAL!')).toBeVisible();
+    expect(celebrateYahtzee).toHaveBeenCalledWith('voetbal');
+    fireEvent.click(screen.getByText('YAHTZEE!!!'));
+    expect(screen.queryByText('YAHTZEE!!!')).toBeNull();
+  });
+
+  it('celebrates calmly and at once when the device wants less motion', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    const start = newGame();
+    const view = render(<FunLayer state={start} theme="snoep" />);
+    view.rerender(<FunLayer state={ok(roll(start, always(2)))} theme="snoep" />);
+    act(() => vi.advanceTimersByTime(0));
+    expect(screen.getByText('Het regent snoep!')).toBeVisible();
+    act(() => vi.advanceTimersByTime(4000));
+    expect(screen.queryByText('YAHTZEE!!!')).toBeNull();
   });
 
   it('skips the turn banner when the device wants less motion', () => {
@@ -262,5 +295,72 @@ describe('FunLayer', () => {
     const view = render(<FunLayer state={undefined} theme="snoep" />);
     view.rerender(<FunLayer state={newGame()} theme="snoep" />);
     expect(screen.queryByText('Emma is aan de beurt!')).toBeNull();
+  });
+});
+
+describe('playerTitles', () => {
+  const four: Player[] = [
+    ...players,
+    { id: 'c', name: 'Noor', avatar: 'cat', colour: '#7b4fd6', type: 'human' },
+    { id: 'd', name: 'Papa', avatar: 'dog', colour: '#d66a00', type: 'human' },
+  ];
+  const card = (filled: Partial<Record<BoxId, number>>, yahtzeeBonusCount = 0) => ({
+    boxes: { ...emptyScorecard().boxes, ...filled },
+    yahtzeeBonusCount,
+  });
+  const game = (cards: ReturnType<typeof card>[], who = four): GameState => ({
+    ...ok(createGame(who.slice(0, cards.length))),
+    status: 'finished',
+    scorecards: cards,
+  });
+
+  it('gives the winner the winner title and everybody else what they did best', () => {
+    const titles = playerTitles(
+      game([
+        card({ chance: 30, ones: 5 }), // the best single box of the others
+        card({ yahtzee: 50 }, 1), // a Yahtzee plus a bonus Yahtzee: 150 points, the winner
+        card({ ones: 3, twos: 6, threes: 9, fours: 16, fives: 20, sixes: 18 }),
+        card({ chance: 5, ones: 0, twos: 0 }),
+      ]),
+      'voetbal',
+    );
+    expect(titles).toEqual({
+      b: 'Speler van de wedstrijd',
+      c: 'Bonusjager',
+      a: 'Topscorer',
+      d: 'Durfal van het veld',
+    });
+  });
+
+  it('shares the winner title in a tie and finds a friendly title for the rest', () => {
+    const titles = playerTitles(
+      game([card({ chance: 20 }), card({ chance: 20 }), card({ chance: 10 }), card({})]),
+      'snoep',
+    );
+    expect(titles.a).toBe('Snoepkampioen');
+    expect(titles.b).toBe('Snoepkampioen');
+    expect(titles.c).toBe('Lekkerbek');
+    expect(titles.d).toBe('Lollyliefhebber');
+  });
+
+  it('never gives two others the same title', () => {
+    const titles = playerTitles(
+      game([card({ chance: 30 }), card({}), card({}), card({})]),
+      'voetbal',
+    );
+    expect(Object.values(titles)).toEqual([
+      'Speler van de wedstrijd',
+      'Teamspeler',
+      'Supporter van het jaar',
+      'Talent van de toekomst',
+    ]);
+  });
+
+  it('gives the Yahtzee title to whoever threw the most Yahtzees', () => {
+    const titles = playerTitles(
+      game([card({ chance: 400 }), card({ yahtzee: 50 }), card({ yahtzee: 50 }, 2)]),
+      'snoep',
+    );
+    expect(titles).toMatchObject({ c: 'Jackpot-snoeper', b: 'Lekkerbek' });
   });
 });
