@@ -14,6 +14,7 @@ import { reducedMotion } from '../motion';
 import type { ClientResult, GameActions } from '../useGame';
 import { Dice } from './Dice';
 import { Dialog } from './Dialog';
+import { JoinPanel } from './JoinPanel';
 import { MenuIcon } from './Icons';
 import { MuteButton } from './MuteButton';
 import { ScoreCard } from './ScoreCard';
@@ -31,7 +32,11 @@ interface Props {
 // three.js and the physics engine are only downloaded when the 3D dice are used.
 const DiceScene = lazy(() => import('../dice3d/DiceScene'));
 
-type Open = { kind: 'confirm'; box: BoxId; points: number } | { kind: 'rules' } | { kind: 'stop' };
+type Open =
+  | { kind: 'confirm'; box: BoxId; points: number }
+  | { kind: 'rules' }
+  | { kind: 'stop' }
+  | { kind: 'join' };
 
 export function GameScreen({
   state,
@@ -101,6 +106,7 @@ export function GameScreen({
           <MuteButton muted={muted} onChange={onMute} />
           <GameMenu
             onRules={() => setOpen({ kind: 'rules' })}
+            onJoin={() => setOpen({ kind: 'join' })}
             onStop={() => setOpen({ kind: 'stop' })}
           />
         </span>
@@ -219,6 +225,20 @@ export function GameScreen({
         </Dialog>
       )}
 
+      {open?.kind === 'join' && (
+        <Dialog
+          title={nl.join.menu}
+          onClose={close}
+          actions={
+            <button type="button" className="button" onClick={close}>
+              {nl.confirm.close}
+            </button>
+          }
+        >
+          <JoinPanel />
+        </Dialog>
+      )}
+
       {open?.kind === 'stop' && (
         <Dialog
           title={nl.confirm.stop}
@@ -270,8 +290,14 @@ function useLeavingName(turnId: string, name: string): string | null {
   return leaving;
 }
 
-/** The ☰ button with the less frequent actions: the rules and stopping the game. */
-function GameMenu({ onRules, onStop }: { onRules: () => void; onStop: () => void }) {
+interface GameMenuProps {
+  onRules: () => void;
+  onJoin: () => void;
+  onStop: () => void;
+}
+
+/** The ☰ button with the less frequent actions: rules, a phone's QR code, stopping. */
+function GameMenu({ onRules, onJoin, onStop }: GameMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -314,6 +340,9 @@ function GameMenu({ onRules, onStop }: { onRules: () => void; onStop: () => void
         <span className="menu-list card">
           <button type="button" className="button soft" onClick={choose(onRules)}>
             {nl.game.rules}
+          </button>
+          <button type="button" className="button soft" onClick={choose(onJoin)}>
+            {nl.join.menu}
           </button>
           <button type="button" className="button soft" onClick={choose(onStop)}>
             {nl.game.stop}

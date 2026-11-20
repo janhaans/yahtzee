@@ -8,6 +8,7 @@ import './styles/dice.css';
 import './styles/fun.css';
 import './styles/start.css';
 import './styles/setup.css';
+import './styles/join.css';
 import './styles/game.css';
 import './styles/end.css';
 

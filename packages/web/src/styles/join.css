@@ -1,0 +1,97 @@
+/* Joining with a phone: the QR code on the laptop (setup screen and game menu) */
+.setup-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 24px;
+}
+
+.join-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+}
+
+.join-panel h2 {
+  font-size: 1.4rem;
+}
+
+.qr-code {
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-inner);
+}
+
+.join-url {
+  font-size: 1.1rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.join-none {
+  font-weight: 700;
+}
+
+.dialog .join-panel {
+  box-shadow: none;
+  padding: 0;
+}
+
+.address-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.address-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 48px;
+  padding: 10px 16px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.address-choice[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* A phone player in the setup list */
+.phone-name {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  font-size: 1.2rem;
+}
+
+.phone-badge {
+  padding: 6px 14px;
+  border-radius: var(--pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.phone-badge.offline {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+@media (max-width: 1000px) {
+  .setup-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

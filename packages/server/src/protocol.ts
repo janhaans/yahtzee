@@ -74,6 +74,19 @@ export interface LobbyState {
 /** A change to a player in the lobby. */
 export type LobbyChange = Partial<NewPlayer>;
 
+/** What kind of network an address is on. Phones at home are almost always on Wi-Fi. */
+export type NetworkKind = 'wifi' | 'cable' | 'other';
+
+/** An address of the laptop that phones can open to join (`GET /api/join`). */
+export interface JoinAddress {
+  /** The network interface, e.g. en0. */
+  readonly name: string;
+  readonly kind: NetworkKind;
+  readonly address: string;
+  /** The player page on this address, e.g. http://192.168.1.20:3000/speler. */
+  readonly url: string;
+}
+
 /** How a screen introduces itself when it connects (Socket.IO `auth`). */
 export type Hello = { role: 'table' } | { role: 'phone'; token?: string | null };
 

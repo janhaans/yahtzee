@@ -1,6 +1,6 @@
 import type { BoxId } from '@yahtzee/game-logic';
 import type { AvatarId, Colour, ThemeId } from '@yahtzee/server/looks';
-import type { ActionError } from '@yahtzee/server/protocol';
+import type { ActionError, NetworkKind } from '@yahtzee/server/protocol';
 import type { MessageKind } from '../fun/messages';
 
 /** All Dutch user-facing text. More sections are added per milestone. */
@@ -109,6 +109,22 @@ export const nl = {
     colourTaken: (colour: string) => `${colour} (al gekozen)`,
     onPhone: '📱 op de telefoon',
     phoneOffline: '📱 even weg...',
+  },
+
+  join: {
+    title: 'Scan mij en doe mee!',
+    qrLabel: (url: string) => `QR-code om mee te doen: ${url}`,
+    sameWifi: 'Zet je telefoon op dezelfde wifi als de laptop en scan de code met je camera.',
+    loading: 'Even het adres van de laptop zoeken...',
+    noNetwork:
+      'Geen wifi gevonden, dus meedoen met een telefoon lukt nu niet. Spelen op de laptop kan altijd!',
+    otherAddress: 'Ander adres kiezen',
+    chooseTitle: 'Welk adres moeten de telefoons gebruiken?',
+    kinds: { wifi: 'Wifi', cable: 'Kabel', other: 'Anders (VPN of virtueel)' } satisfies Record<
+      NetworkKind,
+      string
+    >,
+    menu: 'Telefoon koppelen',
   },
 
   avatars: {

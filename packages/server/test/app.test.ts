@@ -13,6 +13,7 @@ import type { GameSetup } from '../src/looks.js';
 import type {
   ActionResult,
   ClientToServerEvents,
+  JoinAddress,
   LobbyState,
   SeatInfo,
   ServerToClientEvents,
@@ -363,6 +364,27 @@ describe('save warning', () => {
     flaky.failing = false;
     await client.emitWithAck('game:chooseBox', { box: 'ones' });
     await expect.poll(() => warnings.at(-1)).toBe(false);
+  });
+});
+
+describe('join addresses', () => {
+  it('serves the addresses phones can use, looked up on every request', async () => {
+    const history = memoryHistory();
+    let addresses: JoinAddress[] = [];
+    app = await buildApp({
+      room: new GameRoom(Math.random, { history }),
+      history,
+      serveWeb: false,
+      joinAddresses: () => addresses,
+    });
+    expect((await app.fastify.inject('/api/join')).json()).toEqual({ addresses: [] });
+    addresses = [{ name: 'en0', kind: 'wifi', address: '192.168.1.20', url: 'http://x/speler' }];
+    expect((await app.fastify.inject('/api/join')).json()).toEqual({ addresses });
+  });
+
+  it('has none when nobody says', async () => {
+    await start();
+    expect((await app!.fastify.inject('/api/join')).json()).toEqual({ addresses: [] });
   });
 });
 

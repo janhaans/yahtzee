@@ -51,3 +51,14 @@ export function useThemePreference() {
 export function useMuted() {
   return useStored<boolean>(MUTED_KEY, parseMuted, formatMuted);
 }
+
+const JOIN_KEY = 'yahtzee.joinAddress';
+const parseText = (raw: string | null): string => raw ?? '';
+
+/**
+ * The laptop address the QR code shows, when someone picked one by hand (a laptop with
+ * Wi-Fi, a cable and a VPN has several). Empty: use the best one the server found.
+ */
+export function useJoinChoice() {
+  return useStored<string>(JOIN_KEY, parseText, same);
+}

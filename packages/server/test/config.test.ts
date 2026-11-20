@@ -11,6 +11,8 @@ describe('readConfig', () => {
       serveWeb: false,
       seed: null,
       dbPath: resolve(import.meta.dirname, '../../../data/yahtzee.db'),
+      joinPort: 3000,
+      publicUrl: null,
     });
   });
 
@@ -39,6 +41,16 @@ describe('readConfig', () => {
 
   it('reads the database file from YAHTZEE_DB', () => {
     expect(readConfig({ YAHTZEE_DB: '/tmp/test.db' }).dbPath).toBe('/tmp/test.db');
+  });
+
+  it('reads the port and fixed address for phones', () => {
+    expect(readConfig({ PORT: '3100' }).joinPort).toBe(3100);
+    expect(readConfig({ PORT: '3100', JOIN_PORT: '5173' }).joinPort).toBe(5173);
+    expect(readConfig({ JOIN_PORT: 'x' }).joinPort).toBe(3000);
+    expect(readConfig({ PUBLIC_URL: 'http://laptop.local:3000' }).publicUrl).toBe(
+      'http://laptop.local:3000',
+    );
+    expect(readConfig({ PUBLIC_URL: 'laptop' }).publicUrl).toBeNull();
   });
 
   it('ignores YAHTZEE_SEED in production', () => {

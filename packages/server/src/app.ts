@@ -6,6 +6,7 @@ import { Server, type Socket } from 'socket.io';
 import type {
   ActionResult,
   ClientToServerEvents,
+  JoinAddress,
   SeatResult,
   ServerToClientEvents,
 } from './protocol.js';
@@ -74,11 +75,16 @@ export async function buildApp(options: {
   room: GameRoom;
   history: HistoryStore;
   serveWeb: boolean;
+  /** The addresses phones can use to join, best first. Asked again on every request. */
+  joinAddresses?: () => JoinAddress[];
 }): Promise<App> {
   const { room } = options;
   const lobby = new Lobby(room);
   const fastify = Fastify({ logger: { level: 'warn' } });
   registerHistoryRoutes(fastify, options.history);
+  const joinAddresses = options.joinAddresses ?? (() => []);
+  // The networks of the laptop can change while it runs, so they are looked up every time.
+  fastify.get('/api/join', () => ({ addresses: joinAddresses() }));
 
   if (options.serveWeb) {
     if (!existsSync(WEB_DIST)) {

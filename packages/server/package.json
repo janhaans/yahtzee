@@ -10,7 +10,7 @@
     "./api": "./src/history/api.ts"
   },
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "JOIN_PORT=5173 tsx watch src/index.ts",
     "start": "NODE_ENV=production tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },

@@ -35,6 +35,7 @@ new state to every screen.
 | `GET /api/stats/players`         | Games, wins, win %, best and average score, Yahtzees      |
 | `GET /api/stats/hall-of-fame`    | Top scores of finished games (default 10)                 |
 | `GET /api/stats/games-per-month` | Games per month (Europe/Amsterdam)                        |
+| `GET /api/join`                  | Addresses phones can use to join, Wi-Fi first             |
 
 `/api/games` query: `from`, `to` (`yyyy-mm-dd`, days in Amsterdam), `player` (repeat for
 several: games where all of them played), `winner`, `status`, `playerCount`, `minScore` and
@@ -50,3 +51,5 @@ several: games where all of them played), `winner`, `status`, `playerCount`, `mi
 | `SERVE_WEB`    | on in production                         | `1` serves `packages/web/dist`                                     |
 | `YAHTZEE_SEED` | –                                        | Predictable dice; ignored when `NODE_ENV=production` (`npm start`) |
 | `YAHTZEE_DB`   | `data/yahtzee.db`                        | SQLite file with the game history                                  |
+| `JOIN_PORT`    | `PORT` (`5173` in `npm run dev`)         | Port in the QR code: the port phones open                          |
+| `PUBLIC_URL`   | –                                        | Fixed address for the QR code, e.g. `http://laptop.local:3000`     |

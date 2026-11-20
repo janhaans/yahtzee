@@ -16,6 +16,7 @@ import { reducedMotion } from '../motion';
 import type { ClientResult, LobbyActions } from '../useGame';
 import { Dialog } from './Dialog';
 import { BackIcon } from './Icons';
+import { JoinPanel } from './JoinPanel';
 
 interface Props {
   /** The new game as the server has it; phones join it by themselves. */
@@ -102,56 +103,26 @@ export function SetupScreen({ lobby, actions, onBack, recentPlayers = [] }: Prop
         </div>
       </header>
 
-      <form className="card setup-card" onSubmit={submit}>
-        <ol className={shuffling ? 'name-list shuffling' : 'name-list'}>
-          {rows.map((row, i) =>
-            row.controller === 'phone' ? (
-              <li key={row.id} className="player-row phone-player">
-                <span
-                  className="avatar-button"
-                  style={{ backgroundColor: row.colour }}
-                  aria-hidden="true"
-                >
-                  {avatarEmoji(row.avatar)}
-                </span>
-                <span className="name-field">
-                  <span>{nl.setup.playerLabel(i + 1)}</span>
-                  <strong className="phone-name">{row.name}</strong>
-                </span>
-                <span className={row.online ? 'phone-badge' : 'phone-badge offline'}>
-                  {row.online ? nl.setup.onPhone : nl.setup.phoneOffline}
-                </span>
-                <button
-                  type="button"
-                  className="button round soft remove-player"
-                  aria-label={nl.setup.removePlayer(i + 1)}
-                  onClick={() => run(() => actions.remove(row.id))}
-                >
-                  ✕
-                </button>
-              </li>
-            ) : (
-              <li key={row.id} className="player-row">
-                <button
-                  type="button"
-                  className="avatar-button"
-                  style={{ backgroundColor: row.colour }}
-                  aria-label={`${nl.setup.chooseAvatar(i + 1)}: ${nl.avatars[row.avatar]}`}
-                  onClick={() => setPicking(row.id)}
-                >
-                  {avatarEmoji(row.avatar)}
-                </button>
-                <label className="name-field">
-                  <span>{nl.setup.playerLabel(i + 1)}</span>
-                  <NameInput value={row.name} onChange={(name) => update(row, { name })} />
-                </label>
-                <ColourPicker
-                  seat={i}
-                  value={row.colour}
-                  taken={rows.filter((r) => r !== row).map((r) => r.colour)}
-                  onPick={(colour) => update(row, { colour })}
-                />
-                {rows.length > MIN_PLAYERS && (
+      <div className="setup-body">
+        <form className="card setup-card" onSubmit={submit}>
+          <ol className={shuffling ? 'name-list shuffling' : 'name-list'}>
+            {rows.map((row, i) =>
+              row.controller === 'phone' ? (
+                <li key={row.id} className="player-row phone-player">
+                  <span
+                    className="avatar-button"
+                    style={{ backgroundColor: row.colour }}
+                    aria-hidden="true"
+                  >
+                    {avatarEmoji(row.avatar)}
+                  </span>
+                  <span className="name-field">
+                    <span>{nl.setup.playerLabel(i + 1)}</span>
+                    <strong className="phone-name">{row.name}</strong>
+                  </span>
+                  <span className={row.online ? 'phone-badge' : 'phone-badge offline'}>
+                    {row.online ? nl.setup.onPhone : nl.setup.phoneOffline}
+                  </span>
                   <button
                     type="button"
                     className="button round soft remove-player"
@@ -160,50 +131,83 @@ export function SetupScreen({ lobby, actions, onBack, recentPlayers = [] }: Prop
                   >
                     ✕
                   </button>
-                )}
-              </li>
-            ),
+                </li>
+              ) : (
+                <li key={row.id} className="player-row">
+                  <button
+                    type="button"
+                    className="avatar-button"
+                    style={{ backgroundColor: row.colour }}
+                    aria-label={`${nl.setup.chooseAvatar(i + 1)}: ${nl.avatars[row.avatar]}`}
+                    onClick={() => setPicking(row.id)}
+                  >
+                    {avatarEmoji(row.avatar)}
+                  </button>
+                  <label className="name-field">
+                    <span>{nl.setup.playerLabel(i + 1)}</span>
+                    <NameInput value={row.name} onChange={(name) => update(row, { name })} />
+                  </label>
+                  <ColourPicker
+                    seat={i}
+                    value={row.colour}
+                    taken={rows.filter((r) => r !== row).map((r) => r.colour)}
+                    onPick={(colour) => update(row, { colour })}
+                  />
+                  {rows.length > MIN_PLAYERS && (
+                    <button
+                      type="button"
+                      className="button round soft remove-player"
+                      aria-label={nl.setup.removePlayer(i + 1)}
+                      onClick={() => run(() => actions.remove(row.id))}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </li>
+              ),
+            )}
+          </ol>
+
+          {rows.length < MAX_PLAYERS && (
+            <button type="button" className="add-player" onClick={() => run(actions.add)}>
+              {nl.setup.addPlayer}
+            </button>
           )}
-        </ol>
 
-        {rows.length < MAX_PLAYERS && (
-          <button type="button" className="add-player" onClick={() => run(actions.add)}>
-            {nl.setup.addPlayer}
-          </button>
-        )}
+          {suggestions.length > 0 && firstEmpty && (
+            <div className="recent-names">
+              <span className="hint">{nl.setup.recent}</span>
+              {suggestions.map((player) => (
+                <button
+                  key={player.name}
+                  type="button"
+                  className="button soft chip"
+                  aria-label={nl.setup.addRecent(player.name)}
+                  onClick={() => addRecent(firstEmpty, player)}
+                >
+                  {avatarEmoji(player.avatar)} {player.name}
+                </button>
+              ))}
+            </div>
+          )}
 
-        {suggestions.length > 0 && firstEmpty && (
-          <div className="recent-names">
-            <span className="hint">{nl.setup.recent}</span>
-            {suggestions.map((player) => (
-              <button
-                key={player.name}
-                type="button"
-                className="button soft chip"
-                aria-label={nl.setup.addRecent(player.name)}
-                onClick={() => addRecent(firstEmpty, player)}
-              >
-                {avatarEmoji(player.avatar)} {player.name}
-              </button>
-            ))}
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <div className="setup-footer">
+            <button type="button" className="button soft" disabled={shuffling} onClick={whoStarts}>
+              {nl.setup.whoStarts}
+            </button>
+            <button type="submit" className="button big" disabled={shuffling}>
+              {nl.setup.start[theme]}
+            </button>
           </div>
-        )}
-
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-
-        <div className="setup-footer">
-          <button type="button" className="button soft" disabled={shuffling} onClick={whoStarts}>
-            {nl.setup.whoStarts}
-          </button>
-          <button type="submit" className="button big" disabled={shuffling}>
-            {nl.setup.start[theme]}
-          </button>
-        </div>
-      </form>
+        </form>
+        <JoinPanel />
+      </div>
 
       {pickingRow && (
         <AvatarDialog
