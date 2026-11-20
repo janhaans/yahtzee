@@ -4,6 +4,7 @@ import type { BoxId, GameState } from '@yahtzee/game-logic';
 import type {
   ActionResult,
   ClientToServerEvents,
+  Hello,
   ServerToClientEvents,
   UnfinishedGame,
 } from '@yahtzee/server/protocol';
@@ -50,7 +51,11 @@ export interface GameConnection {
 
 /** Connects to the game server. The server owns the state; we only send intentions. */
 export function useGame(): GameConnection {
-  const socket: GameSocket = useMemo(() => io({ autoConnect: false }), []);
+  // The laptop introduces itself as the game table; the server checks it really is the laptop.
+  const socket: GameSocket = useMemo(
+    () => io({ autoConnect: false, auth: { role: 'table' } satisfies Hello }),
+    [],
+  );
   const [state, setState] = useState<GameState | null | undefined>(undefined);
   const [theme, setTheme] = useState<ThemeId | null>(null);
   const [connected, setConnected] = useState(false);

@@ -401,6 +401,10 @@ export const nl = {
     unfinished_game:
       'Er staat nog een onafgemaakt spel klaar. Kies eerst: verder spelen of stoppen.',
     no_unfinished_game: 'Er is al gekozen wat er met het oude spel gebeurt.',
+    not_allowed: 'Dat kan alleen op de laptop.',
+    not_your_turn: 'Even geduld, je bent nog niet aan de beurt!',
+    seat_taken: 'Die speler speelt al op een andere telefoon.',
+    too_early: 'Nog heel even wachten, misschien komt de telefoon zo terug.',
     disconnected: 'Even geen verbinding met de spelcomputer...',
   } satisfies Record<ActionError | 'disconnected', string>,
 } as const;

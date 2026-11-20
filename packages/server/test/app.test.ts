@@ -5,12 +5,13 @@ import { join as joinPath } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { io as connect, type Socket } from 'socket.io-client';
 import type { GameState } from '@yahtzee/game-logic';
-import { buildApp, type App } from '../src/app.js';
+import { buildApp, clientAddress, type App } from '../src/app.js';
 import type { GameList, GameDetail } from '../src/history/api.js';
 import { openDatabase, type Database } from '../src/history/db.js';
 import { HistoryStore } from '../src/history/store.js';
 import type {
   ClientToServerEvents,
+  SeatInfo,
   ServerToClientEvents,
   UnfinishedGame,
 } from '../src/protocol.js';
@@ -35,7 +36,7 @@ async function start(
 
 /** Connects and resolves with the client once the first state has arrived. */
 function join(url: string): Promise<{ client: Client; states: (GameState | null)[] }> {
-  const client: Client = connect(url, { transports: ['websocket'] });
+  const client: Client = connect(url, { transports: ['websocket'], auth: { role: 'table' } });
   clients.push(client);
   const states: (GameState | null)[] = [];
   return new Promise((resolve) => {
@@ -113,6 +114,100 @@ describe('socket server', () => {
   });
 });
 
+describe('who may act', () => {
+  /** A phone: it connects with its seat token, if it has one. */
+  function phone(url: string, token: string | null = null, headers: Record<string, string> = {}) {
+    const client: Client = connect(url, {
+      transports: ['websocket'],
+      auth: { role: 'phone', token },
+      extraHeaders: headers,
+    });
+    clients.push(client);
+    const you: (string | null)[] = [];
+    const seats: (readonly SeatInfo[])[] = [];
+    client.on('seat:you', (id) => you.push(id));
+    client.on('game:seats', (s) => seats.push(s));
+    return { client, you, seats };
+  }
+
+  it('knows the address behind the development proxy, but only from the laptop itself', () => {
+    expect(clientAddress('127.0.0.1', undefined)).toBe('127.0.0.1');
+    expect(clientAddress('127.0.0.1', '127.0.0.1, 192.168.1.30')).toBe('192.168.1.30');
+    expect(clientAddress('::1', '')).toBe('::1');
+    expect(clientAddress('192.168.1.30', '127.0.0.1')).toBe('192.168.1.30');
+    expect(clientAddress('::ffff:127.0.0.1', ['a', 'b'])).toBe('::ffff:127.0.0.1');
+  });
+
+  it('only lets the laptop start or stop a game', async () => {
+    const url = await start();
+    const p = phone(url);
+    await expect.poll(() => p.you).toEqual([null]);
+    expect(await p.client.emitWithAck('game:create', lineup(['Emma', 'Sara']))).toEqual({
+      ok: false,
+      error: 'not_allowed',
+    });
+
+    // A phone behind the development proxy that says it is the table is still a phone.
+    const proxied: Client = connect(url, {
+      transports: ['websocket'],
+      auth: { role: 'table' },
+      extraHeaders: { 'x-forwarded-for': '192.168.1.30' },
+    });
+    clients.push(proxied);
+    expect(await proxied.emitWithAck('game:create', lineup(['Emma', 'Sara']))).toEqual({
+      ok: false,
+      error: 'not_allowed',
+    });
+
+    const table = await join(url);
+    expect(await table.client.emitWithAck('game:create', lineup(['Emma', 'Sara']))).toEqual({
+      ok: true,
+    });
+    for (const event of ['game:abort', 'game:takeOver', 'game:rematch'] as const) {
+      expect(await p.client.emitWithAck(event)).toEqual({ ok: false, error: 'not_allowed' });
+    }
+    expect(await table.client.emitWithAck('seat:claim', { playerId: 'x' })).toEqual({
+      ok: false,
+      error: 'not_allowed',
+    });
+  });
+
+  it('lets a phone claim a player, play its turns and come back after a lost connection', async () => {
+    const room = new GameRoom(always(6), { history: memoryHistory() });
+    room.create(lineup(['Emma', 'Sara']));
+    const url = await start(memoryHistory(), room);
+    const table = await join(url);
+    const [emma, sara] = room.state!.players;
+
+    const first = phone(url);
+    const claimed = await first.client.emitWithAck('seat:claim', { playerId: sara!.id });
+    expect(claimed).toMatchObject({ ok: true, playerId: sara!.id });
+    const token = (claimed as { token: string }).token;
+    await expect.poll(() => first.you.at(-1)).toBe(sara!.id);
+    await expect.poll(() => first.seats.at(-1)?.[1]?.controller).toBe('phone');
+
+    // Emma's turn is on the laptop; Sara cannot play it.
+    expect(await first.client.emitWithAck('game:roll')).toEqual({
+      ok: false,
+      error: 'not_your_turn',
+    });
+    await table.client.emitWithAck('game:roll');
+    await table.client.emitWithAck('game:chooseBox', { box: 'sixes' });
+    expect(await first.client.emitWithAck('game:roll')).toEqual({ ok: true });
+    expect(room.state!.players[room.state!.currentPlayerIndex]).not.toBe(emma);
+
+    // The phone drops off: the laptop sees it, and it comes back with its token.
+    first.client.disconnect();
+    await expect.poll(() => room.seats[1]?.online).toBe(false);
+    const again = phone(url, token);
+    await expect.poll(() => again.you.at(-1)).toBe(sara!.id);
+    await expect.poll(() => room.seats[1]?.online).toBe(true);
+    expect(await again.client.emitWithAck('game:chooseBox', { box: 'sixes' })).toEqual({
+      ok: true,
+    });
+  });
+});
+
 describe('unfinished game after a restart', () => {
   let dir: string | undefined;
   let db: Database | undefined;
@@ -132,7 +227,7 @@ describe('unfinished game after a restart', () => {
 
   async function joinWithUnfinished(url: string) {
     const unfinished: (UnfinishedGame | null)[] = [];
-    const client: Client = connect(url, { transports: ['websocket'] });
+    const client: Client = connect(url, { transports: ['websocket'], auth: { role: 'table' } });
     clients.push(client);
     client.on('game:unfinished', (game) => unfinished.push(game));
     await expect.poll(() => unfinished.length).toBe(1);
@@ -191,7 +286,7 @@ describe('save warning', () => {
     const flaky = new FlakyHistory();
     const room = new GameRoom(always(1), { history: flaky, log: () => {} });
     const url = await start(flaky.inner, room);
-    const client: Client = connect(url, { transports: ['websocket'] });
+    const client: Client = connect(url, { transports: ['websocket'], auth: { role: 'table' } });
     clients.push(client);
     const warnings: boolean[] = [];
     client.on('history:saveFailed', (failed) => warnings.push(failed));
