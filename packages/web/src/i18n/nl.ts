@@ -270,6 +270,7 @@ export const nl = {
       winner: 'Speler van de wedstrijd',
       yahtzee: 'Hattrick-held',
       bonus: 'Bonusjager',
+      straights: 'Straatmeester',
       bestBox: 'Topscorer',
       bravest: 'Durfal van het veld',
       extra: ['Teamspeler', 'Supporter van het jaar', 'Talent van de toekomst'],
@@ -278,13 +279,14 @@ export const nl = {
       winner: 'Snoepkampioen',
       yahtzee: 'Jackpot-snoeper',
       bonus: 'Toetjesjager',
+      straights: 'Straatmeester',
       bestBox: 'Lekkerbek',
       bravest: 'Zuurtjesheld',
       extra: ['Lollyliefhebber', 'Chocoladefan', 'Snoepproever'],
     },
   } satisfies Record<
     ThemeId,
-    Record<'winner' | 'yahtzee' | 'bonus' | 'bestBox' | 'bravest', string> & {
+    Record<'winner' | 'yahtzee' | 'bonus' | 'straights' | 'bestBox' | 'bravest', string> & {
       extra: readonly string[];
     }
   >,
@@ -359,13 +361,15 @@ export const nl = {
   },
 
   end: {
-    title: 'Het spel is klaar!',
+    title: 'Eindstand',
     place: (place: number) => `Plek ${place}`,
-    winner: (name: string) => `${name} wint! Gefeliciteerd!`,
-    tie: (names: string) => `Gelijkspel! ${names} winnen samen!`,
+    winner: (name: string) => `${name} wint!`,
+    congrats: 'Gefeliciteerd! Wat een wedstrijd.',
+    tie: 'Gelijkspel!',
+    tieNames: (names: string) => `${names} winnen samen!`,
     and: 'en',
     points: (n: number) => `${n} punten`,
-    rematch: 'Nog een keer (zelfde spelers)',
+    rematch: 'Nog een keer',
     newGame: 'Nieuw spel',
   },
 

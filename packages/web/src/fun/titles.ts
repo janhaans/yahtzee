@@ -3,18 +3,20 @@ import type { ThemeId } from '@yahtzee/server/looks';
 import { nl } from '../i18n/nl';
 
 /** Something a player can stand out in, with the title it earns. */
-type Award = 'yahtzee' | 'bonus' | 'bestBox' | 'bravest';
+type Award = 'yahtzee' | 'bonus' | 'straights' | 'bestBox' | 'bravest';
 
 /** How good a scorecard is at each award; 0 means it does not qualify. */
 const MEASURES: Record<Award, (card: Scorecard) => number> = {
   yahtzee: (card) => (card.boxes.yahtzee === 50 ? 1 : 0) + card.yahtzeeBonusCount,
   bonus: (card) => totals(card).upperBonus,
+  // Small and large straights that scored.
+  straights: (card) => (card.boxes.smallStraight ? 1 : 0) + (card.boxes.largeStraight ? 1 : 0),
   bestBox: (card) => Math.max(...BOX_IDS.map((box) => card.boxes[box] ?? 0)),
   // A scratch takes courage; the player with the most gets a cheerful title for it.
   bravest: (card) => BOX_IDS.filter((box) => card.boxes[box] === 0).length,
 };
 
-const AWARDS: readonly Award[] = ['yahtzee', 'bonus', 'bestBox', 'bravest'];
+const AWARDS: readonly Award[] = ['yahtzee', 'bonus', 'straights', 'bestBox', 'bravest'];
 
 /**
  * A fun, positive title for every player at the end of a game, by player id. The winners

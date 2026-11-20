@@ -59,7 +59,7 @@ test('two players play a full game of 13 rounds', async ({ page }) => {
     await playTurn(page, 'Sara');
   }
 
-  await expect(page.getByRole('heading', { name: 'Het spel is klaar!' })).toBeVisible();
+  await expect(page.getByText('Eindstand')).toBeVisible();
 
   // The ranking is sorted by score and the headline names the player(s) with the best score.
   const rows = page.locator('.ranking li');
@@ -90,7 +90,7 @@ test('two players play a full game of 13 rounds', async ({ page }) => {
   const savedWinners = saved.players.filter((p) => p.isWinner).map((p) => p.name);
   expect(savedWinners).toEqual(points[0] === points[1] ? ['Emma', 'Sara'] : [best[0]]);
 
-  await page.getByRole('button', { name: 'Nog een keer (zelfde spelers)' }).click();
+  await page.getByRole('button', { name: 'Nog een keer' }).click();
   await expect(page.getByText('Ronde 1 van 13')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Emma is aan de beurt!' })).toBeVisible();
 });

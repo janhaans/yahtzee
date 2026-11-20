@@ -43,52 +43,57 @@ export function EndScreen({ state, theme = DEFAULT_THEME, onRematch, onNewGame }
     };
   }, [theme]);
 
-  const headline =
-    winnerNames.length === 1
-      ? nl.end.winner(winnerNames[0]!)
-      : nl.end.tie(`${winnerNames.slice(0, -1).join(', ')} ${nl.end.and} ${winnerNames.at(-1)}`);
+  const tie = winnerNames.length > 1;
+  const together = `${winnerNames.slice(0, -1).join(', ')} ${nl.end.and} ${winnerNames.at(-1)}`;
 
   return (
     <main className="screen end-screen">
-      <h1>{nl.end.title}</h1>
-      <h2 className="winner-headline">🏆 {headline}</h2>
+      <header className="end-header">
+        <p className="eyebrow">{nl.end.title}</p>
+        <h1 className="winner-headline">{tie ? nl.end.tie : nl.end.winner(winnerNames[0]!)}</h1>
+        <p className="hint">{tie ? nl.end.tieNames(together) : nl.end.congrats}</p>
+      </header>
 
       <ol className="ranking podium">
         {ranking.map(({ player, score, place }, i) => (
           <li
             key={player.id}
             className={place === 1 ? 'winner' : undefined}
-            style={{ order: PODIUM_ORDER[i], borderColor: player.colour }}
+            style={{ order: PODIUM_ORDER[i] }}
             aria-label={`${nl.end.place(place)}: ${player.name}, ${nl.end.points(score)}, ${titles[player.id]}`}
           >
-            <span className="avatar" aria-hidden="true">
-              {avatarEmoji(player.avatar)}
-            </span>
-            <span className="name">{player.name}</span>
-            <span className="points">{nl.end.points(score)}</span>
-            <span className="title">{titles[player.id]}</span>
             <span
-              className={`step step-${place}`}
+              className="avatar avatar-circle"
               style={{ backgroundColor: player.colour }}
               aria-hidden="true"
             >
-              <span className="trophy">{TROPHIES[place] ?? ''}</span>
-              <span className="place">{place}</span>
+              {avatarEmoji(player.avatar)}
+            </span>
+            <span className="name">{player.name}</span>
+            <span className="title">{titles[player.id]}</span>
+            <span className={`step step-${place}`}>
+              <span className="place">
+                {place}
+                <span className="trophy" aria-hidden="true">
+                  {TROPHIES[place] ?? ''}
+                </span>
+              </span>
+              <span className="points">{nl.end.points(score)}</span>
             </span>
           </li>
         ))}
       </ol>
 
-      <ScoreTable players={state.players} scorecards={state.scorecards} winnerIds={winnerIds} />
-
-      <div className="row">
+      <div className="end-actions">
         <button type="button" className="button big" onClick={onRematch}>
           {nl.end.rematch}
         </button>
-        <button type="button" className="button" onClick={onNewGame}>
+        <button type="button" className="button end-new" onClick={onNewGame}>
           {nl.end.newGame}
         </button>
       </div>
+
+      <ScoreTable players={state.players} scorecards={state.scorecards} winnerIds={winnerIds} />
     </main>
   );
 }

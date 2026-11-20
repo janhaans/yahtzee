@@ -356,6 +356,23 @@ describe('playerTitles', () => {
     ]);
   });
 
+  it('makes whoever scored the most straights the Straatmeester', () => {
+    const titles = playerTitles(
+      game([
+        card({ chance: 400 }),
+        card({ smallStraight: 30 }),
+        card({ smallStraight: 30, largeStraight: 40 }),
+        card({ smallStraight: 0, largeStraight: 0 }),
+      ]),
+      'voetbal',
+    );
+    expect(titles).toMatchObject({
+      c: 'Straatmeester',
+      b: 'Topscorer',
+      d: 'Durfal van het veld',
+    });
+  });
+
   it('gives the Yahtzee title to whoever threw the most Yahtzees', () => {
     const titles = playerTitles(
       game([card({ chance: 400 }), card({ yahtzee: 50 }), card({ yahtzee: 50 }, 2)]),

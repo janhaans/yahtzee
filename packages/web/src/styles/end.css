@@ -1,114 +1,144 @@
-/* End */
-.winner-headline {
-  font-size: 2rem;
-  color: var(--text);
+/* End screen (docs/design/eindscherm.png) */
+.end-screen {
+  max-width: 1200px;
+  align-items: center;
 }
 
-.ranking {
-  padding-left: 1.5em;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.end-header {
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 8px 0 0;
+  color: var(--accent);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.winner-headline {
+  font-size: clamp(2.6rem, 6vw, 4.5rem);
+  line-height: 1.1;
+}
+
+.end-header .hint {
+  margin-top: 8px;
   font-size: 1.2rem;
 }
 
-.ranking li {
-  padding: 8px 14px;
-  border-left: 6px solid var(--line);
-  background: var(--surface);
-  border-radius: 8px;
-}
-
-.ranking .name {
-  margin: 0 12px 0 8px;
-  font-weight: 700;
-}
-
-/* Winner party: a podium with a block per player, 1st in the middle and highest. */
+/* The podium: a column per player, 1st in the middle and highest. */
 .ranking.podium {
-  flex-direction: row;
+  align-self: stretch;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
   justify-content: center;
   align-items: flex-end;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 0;
-  list-style: none;
+  gap: 18px;
 }
 
-.ranking.podium li {
-  width: 200px;
+.podium li {
+  width: 250px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 12px 8px 0;
-  border: none;
-  border-radius: 16px 16px 0 0;
-  background: var(--surface);
+  gap: 8px;
   text-align: center;
 }
 
 .podium .avatar {
-  font-size: 3rem;
+  width: 88px;
+  height: 88px;
+  font-size: 2.8rem;
 }
 
 .podium .winner .avatar {
-  font-size: 4.2rem;
+  width: 116px;
+  height: 116px;
+  font-size: 3.8rem;
+  box-shadow:
+    0 0 0 5px var(--bg),
+    0 0 0 9px var(--accent);
   animation: winner-dance 0.9s ease-in-out infinite;
 }
 
 .podium .name {
-  margin: 0;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.podium .points {
-  font-weight: 800;
+  font-size: 1.4rem;
+  font-weight: 900;
 }
 
 .podium .title {
-  font-size: 1rem;
-  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 12px;
+  background: var(--accent-soft);
   color: var(--accent);
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .podium .step {
   align-self: stretch;
-  margin: 8px -8px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 800;
-  font-size: 2rem;
-  text-shadow: 0 2px 3px rgb(0 0 0 / 0.35);
-  border-radius: 8px 8px 0 0;
+  justify-content: flex-start;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 22px;
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
-.podium .step-1 {
-  height: 150px;
+.podium .winner .step {
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: var(--shadow-accent);
 }
 
-.podium .step-2 {
-  height: 110px;
-}
-
-.podium .step-3 {
-  height: 80px;
-}
-
-.podium .step-4 {
-  height: 56px;
+.podium .place {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 2.6rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .podium .trophy {
-  font-size: 2.4rem;
-  line-height: 1;
+  font-size: 1.8rem;
+}
+
+.podium .points {
+  color: var(--muted);
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.podium .winner .points {
+  color: inherit;
+}
+
+.podium .step-1 {
+  height: 210px;
+}
+
+.podium .step-2 {
+  height: 160px;
+}
+
+.podium .step-3 {
+  height: 120px;
+}
+
+.podium .step-4 {
+  height: 90px;
 }
 
 @keyframes winner-dance {
@@ -120,9 +150,29 @@
     transform: translateY(-14px) rotate(-12deg);
   }
   50% {
-    transform: translateY(0) rotate(0) scale(1.1);
+    transform: translateY(0) rotate(0) scale(1.08);
   }
   75% {
     transform: translateY(-14px) rotate(12deg);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .podium .winner .avatar {
+    animation: none;
+  }
+}
+
+.end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  margin: 8px 0 16px;
+}
+
+.end-actions .button {
+  min-width: 220px;
+  min-height: 64px;
+  font-size: 1.3rem;
 }

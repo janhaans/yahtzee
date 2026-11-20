@@ -450,14 +450,14 @@ describe('EndScreen', () => {
 
   it('names the winner', () => {
     render(<EndScreen state={finished(20, 25)} onRematch={() => {}} onNewGame={() => {}} />);
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Sara wint!');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Sara wint!');
+    expect(screen.getByText('Eindstand')).toBeVisible();
   });
 
   it('shows a tie with all winners', () => {
     render(<EndScreen state={finished(25, 25)} onRematch={() => {}} onNewGame={() => {}} />);
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
-      'Gelijkspel! Emma en Sara winnen samen!',
-    );
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Gelijkspel!');
+    expect(screen.getByText('Emma en Sara winnen samen!')).toBeVisible();
     // Both stand on the highest step of the podium.
     expect(screen.getByRole('listitem', { name: /^Plek 1: Emma/ })).toBeVisible();
     expect(screen.getByRole('listitem', { name: /^Plek 1: Sara/ })).toBeVisible();
