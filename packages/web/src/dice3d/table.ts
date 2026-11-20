@@ -83,6 +83,9 @@ export class DiceTable {
   /** How each die lies when it is not moving (held dice wiggle around this). */
   readonly #rest: Quaternion[] = [];
   #textures = new Map<DieValue, CanvasTexture>();
+  #blank: CanvasTexture | null = null;
+  /** Between turns the dice lie blank in their row until the next player rolls. */
+  #empty = true;
   #layout: Layout | null = null;
   #slots: Point[] = [];
   #held: boolean[] = [false, false, false, false, false];
@@ -133,7 +136,9 @@ export class DiceTable {
 
   setLook(look: DiceLook): void {
     for (const texture of this.#textures.values()) texture.dispose();
+    this.#blank?.dispose();
     this.#textures = new Map(VALUES.map((value) => [value, faceTexture(look, value)]));
+    this.#blank = faceTexture(look, null);
     this.#dice.forEach((_, i) => this.#paint(i));
   }
 
@@ -163,10 +168,10 @@ export class DiceTable {
   show(dice: Dice | null, held: Held): void {
     this.#roll = null;
     this.#held = [...held];
+    this.#empty = dice === null;
     this.#dice.forEach((mesh, i) => {
-      mesh.visible = dice !== null;
-      if (!dice) return;
-      this.#labels[i] = labelsFor(2, dice[i]!, this.random() * 4);
+      mesh.visible = true;
+      if (dice) this.#labels[i] = labelsFor(2, dice[i]!, this.random() * 4);
       this.#paint(i);
       this.#place(i, new Quaternion());
     });
@@ -182,6 +187,8 @@ export class DiceTable {
     const layout = this.#layout;
     if (!layout) return;
     this.#held = [...held];
+    this.#empty = false;
+    this.#dice.forEach((_, i) => this.#paint(i));
     const result = throwDice({
       slots: this.#slots,
       halfWidth: layout.width / layout.dieSize / 2,
@@ -223,6 +230,7 @@ export class DiceTable {
   dispose(): void {
     this.#renderer.setAnimationLoop(null);
     for (const texture of this.#textures.values()) texture.dispose();
+    this.#blank?.dispose();
     for (const mesh of this.#dice) mesh.material.forEach((m) => m.dispose());
     this.#geometry.dispose();
     this.#shadow.geometry.dispose();
@@ -253,7 +261,7 @@ export class DiceTable {
     mesh.material.forEach((material, face) => {
       // Only the first texture changes the shader; swapping textures later is cheap.
       if (material.map === null) material.needsUpdate = true;
-      material.map = this.#textures.get(this.#labels[i]![face]!)!;
+      material.map = this.#empty ? this.#blank : this.#textures.get(this.#labels[i]![face]!)!;
     });
   }
 

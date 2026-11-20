@@ -52,10 +52,30 @@
   border-radius: var(--pill);
   background: var(--surface);
   box-shadow: var(--shadow);
+  position: relative;
+  transition: border-color 0.2s ease-out;
 }
 
 .score-chip.current {
   border-color: var(--accent);
+}
+
+/* One soft pulse when the ring arrives at the next player (about 0.5 s). */
+.turn-pulse {
+  position: absolute;
+  inset: -3px;
+  border-radius: var(--pill);
+  pointer-events: none;
+  animation: turn-pulse 0.5s ease-out both;
+}
+
+@keyframes turn-pulse {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 10px transparent;
+  }
 }
 
 .score-chip .name {
@@ -121,8 +141,44 @@
   text-align: center;
 }
 
+.turn-names {
+  display: grid;
+}
+
+/* On a turn change the old name fades out while the new one fades in, in the same spot. */
 .turn-banner {
+  grid-area: 1 / 1;
+  margin: 0;
   font-size: 2.2rem;
+  font-weight: 900;
+  animation: turn-in 0.3s ease-out both;
+}
+
+.turn-banner.leaving {
+  animation: turn-out 0.3s ease-out both;
+}
+
+@keyframes turn-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes turn-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .score-chip {
+    transition: none;
+  }
+
+  .turn-pulse,
+  .turn-banner {
+    animation: none;
+  }
 }
 
 .turn-status {

@@ -306,15 +306,9 @@ export const nl = {
     turnOff: 'Geluid uit',
   },
 
-  /** A short cheer under the big turn banner. */
-  turnCheer: {
-    voetbal: 'Aan de bal!',
-    snoep: 'Graai in de snoeppot!',
-  } satisfies Record<ThemeId, string>,
-
   game: {
     round: (round: number, total: number) => `Ronde ${round} van ${total}`,
-    turn: (name: string) => `${name} is aan de beurt!`,
+    turn: (name: string) => `${name} is aan de beurt`,
     rollOf: (n: number, max: number) => `Worp ${n} van ${max}`,
     chooseBoxHint: 'Kies een vakje op je scorekaart',
     menu: 'Menu',

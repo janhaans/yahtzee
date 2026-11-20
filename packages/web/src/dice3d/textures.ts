@@ -39,8 +39,8 @@ function drawPattern(ctx: CanvasRenderingContext2D, look: DiceLook): void {
   }
 }
 
-/** One face of a die: its colour, decoration and pips. */
-export function faceTexture(look: DiceLook, value: DieValue): CanvasTexture {
+/** One face of a die: its colour, decoration and pips. Null gives a blank face. */
+export function faceTexture(look: DiceLook, value: DieValue | null): CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = SIZE;
   canvas.height = SIZE;
@@ -50,7 +50,7 @@ export function faceTexture(look: DiceLook, value: DieValue): CanvasTexture {
   drawPattern(ctx, look);
 
   ctx.fillStyle = look.pip;
-  for (const spot of PIPS[value]) {
+  for (const spot of value === null ? [] : PIPS[value]) {
     const col = (spot - 1) % 3;
     const row = Math.floor((spot - 1) / 3);
     ctx.beginPath();

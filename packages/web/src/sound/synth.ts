@@ -106,6 +106,7 @@ function roll(ctx: BaseAudioContext, out: AudioNode, at: number, theme: ThemeId)
 const C5 = 523.25;
 const E5 = 659.25;
 const G5 = 783.99;
+const A5 = 880;
 const C6 = 1046.5;
 const E6 = 1318.5;
 const G6 = 1568;
@@ -120,27 +121,6 @@ function notes(
 ): void {
   for (const [freq, start, duration] of melody) {
     tone(ctx, out, at, { freq, start, duration, type, volume });
-  }
-}
-
-/** A referee whistle: a high tone with a fast trill. */
-function whistle(ctx: BaseAudioContext, out: AudioNode, at: number): void {
-  const osc = ctx.createOscillator();
-  const trill = ctx.createOscillator();
-  const depth = ctx.createGain();
-  const gain = ctx.createGain();
-  osc.frequency.value = 2900;
-  trill.frequency.value = 28;
-  depth.gain.value = 180;
-  trill.connect(depth).connect(osc.frequency);
-  gain.gain.setValueAtTime(0.0001, at);
-  gain.gain.exponentialRampToValueAtTime(0.12, at + 0.02);
-  gain.gain.setValueAtTime(0.12, at + 0.3);
-  gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.4);
-  osc.connect(gain).connect(out);
-  for (const node of [osc, trill]) {
-    node.start(at);
-    node.stop(at + 0.45);
   }
 }
 
@@ -263,19 +243,23 @@ export function synth(
         'triangle',
       );
     case 'turn':
-      return soccer
-        ? whistle(ctx, out, at)
-        : notes(
-            ctx,
-            out,
-            at,
-            [
-              [E6, 0, 0.6],
-              [E6 * 2, 0, 0.4],
+      // A short, soft two-note chime; a little higher in the sweet shop.
+      return notes(
+        ctx,
+        out,
+        at,
+        soccer
+          ? [
+              [E5, 0, 0.22],
+              [A5, 0.11, 0.26],
+            ]
+          : [
+              [G5, 0, 0.22],
+              [C6, 0.11, 0.26],
             ],
-            'sine',
-            0.15,
-          );
+        'sine',
+        0.08,
+      );
     case 'yahtzee':
       return soccer ? undefined : jingle(ctx, out, at);
     case 'win':

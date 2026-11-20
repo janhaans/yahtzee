@@ -122,7 +122,7 @@ export function Dice({
   return (
     <div
       ref={rowRef}
-      className={`dice ${variant === 'cubes' ? 'cube-dice' : 'button-dice'}${rolling ? ' rolling' : ''}`}
+      className={`dice ${variant === 'cubes' ? 'cube-dice' : 'button-dice'}${rolling ? ' rolling' : ''}${dice === null ? ' empty' : ''}`}
       data-pattern={look.pattern}
       style={style}
       onClickCapture={(event) => {

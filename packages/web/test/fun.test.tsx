@@ -20,6 +20,7 @@ import { playerTitles } from '../src/fun/titles';
 import { gameEvents } from '../src/fun/events';
 import { MESSAGE_KINDS, MessagePicker, messageKind } from '../src/fun/messages';
 import { nl } from '../src/i18n/nl';
+import { sound } from '../src/sound/engine';
 
 vi.mock('../src/celebrate/confetti', () => ({
   celebrateWinner: vi.fn(() => () => {}),
@@ -29,6 +30,7 @@ vi.mock('../src/celebrate/confetti', () => ({
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -230,19 +232,15 @@ describe('FunLayer', () => {
     return { start, show };
   }
 
-  it('shows a big turn banner that goes away by itself or with a tap', () => {
+  it('marks a turn change with only a soft sound: no pop-up, nothing to tap away', () => {
+    const play = vi.spyOn(sound, 'play').mockImplementation(() => {});
     const { start, show } = setup();
     show(start);
-    expect(screen.getByText('Emma is aan de beurt!')).toBeVisible();
-    expect(screen.getByText('Aan de bal!')).toBeVisible();
-    act(() => vi.advanceTimersByTime(2000));
-    expect(screen.queryByText('Emma is aan de beurt!')).toBeNull();
-
-    const scored = ok(chooseBox(ok(roll(start, always(1))), 'ones'));
-    show(scored);
-    expect(screen.getByText('Sara is aan de beurt!')).toBeVisible();
-    fireEvent.click(screen.getByText('Sara is aan de beurt!'));
-    expect(screen.queryByText('Sara is aan de beurt!')).toBeNull();
+    expect(play).toHaveBeenLastCalledWith('turn', 'voetbal');
+    show(ok(chooseBox(ok(roll(start, always(1))), 'ones')));
+    expect(play).toHaveBeenLastCalledWith('turn', 'voetbal');
+    expect(screen.queryByText(/is aan de beurt/)).toBeNull();
+    expect(document.querySelector('.turn-overlay')).toBeNull();
   });
 
   it('shows a theme message after scoring', () => {
@@ -283,18 +281,12 @@ describe('FunLayer', () => {
     expect(screen.queryByText('YAHTZEE!!!')).toBeNull();
   });
 
-  it('skips the turn banner when the device wants less motion', () => {
-    const { start, show } = setup();
-    vi.stubGlobal('matchMedia', () => ({ matches: true }));
-    show(start);
-    expect(screen.queryByText('Emma is aan de beurt!')).toBeNull();
-  });
-
-  it('shows nothing for the first state after connecting', () => {
+  it('plays nothing for the first state after connecting', () => {
+    const play = vi.spyOn(sound, 'play').mockImplementation(() => {});
     vi.stubGlobal('matchMedia', () => ({ matches: false }));
     const view = render(<FunLayer state={undefined} theme="snoep" />);
     view.rerender(<FunLayer state={newGame()} theme="snoep" />);
-    expect(screen.queryByText('Emma is aan de beurt!')).toBeNull();
+    expect(play).not.toHaveBeenCalled();
   });
 });
 

@@ -63,20 +63,31 @@ test('the sound can be switched off and stays off on this device', async ({ page
 test.describe('with animations', () => {
   test.use({ reducedMotion: 'no-preference' });
 
-  test('a big turn banner shows whose turn it is; a tap skips it', async ({ page }) => {
+  test('a turn changes quietly: the ring moves on, no pop-up', async ({ page }) => {
     await startGame(page, 'Voetbalstadion', ['Noor', 'Lieke']);
-    const banner = page.locator('.turn-overlay');
-    await expect(banner).toContainText('Noor is aan de beurt!');
-    await expect(banner).toContainText('Aan de bal!');
-    await banner.click();
-    await expect(banner).toBeHidden();
+    const current = page.locator('.score-chip.current');
+    await expect(current).toContainText('Noor');
+    await expect(page.getByRole('heading', { name: 'Noor is aan de beurt' })).toBeVisible();
+
+    // Noor plays a turn; nothing needs to be tapped away before Lieke can roll.
+    await page.getByRole('button', { name: /^Gooien!/ }).click();
+    await page.waitForTimeout(1000);
+    await page.locator('.scorecard button.choose:enabled').first().click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Ja!' }).click();
+
+    await expect(current).toContainText('Lieke');
+    await expect(current.locator('.turn-pulse')).toHaveCount(1);
+    await expect(page.getByRole('heading', { name: 'Lieke is aan de beurt' })).toBeVisible();
+    await expect(page.locator('.dice.empty')).toBeVisible();
+    await expect(page.locator('.turn-overlay, .backdrop')).toHaveCount(0);
+    await page.getByRole('button', { name: /^Gooien!/ }).click();
+    await expect(page.locator('.dice.empty')).toHaveCount(0);
   });
 
   test('the laptop throws 3D dice that land on the rolled values; a tap skips', async ({
     page,
   }) => {
     await startGame(page, 'Snoepwinkel', ['Emma', 'Sara']);
-    await page.locator('.turn-overlay').click();
     await expect(page.locator('.dice-canvas')).toBeVisible();
     await expect(page.locator('.button-dice')).toBeVisible();
 

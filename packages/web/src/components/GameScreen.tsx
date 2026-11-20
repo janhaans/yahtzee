@@ -10,6 +10,7 @@ import {
 import { DEFAULT_THEME, type ThemeId } from '@yahtzee/server/looks';
 import { avatarEmoji } from '../avatars';
 import { nl } from '../i18n/nl';
+import { reducedMotion } from '../motion';
 import type { ClientResult, GameActions } from '../useGame';
 import { Dice } from './Dice';
 import { Dialog } from './Dialog';
@@ -51,6 +52,8 @@ export function GameScreen({
   const card = state.scorecards[state.currentPlayerIndex]!;
   const rollsLeft = MAX_ROLLS - state.rollsUsed;
   const rollId = `${state.round}-${state.currentPlayerIndex}-${state.rollsUsed}`;
+  const turnId = `${state.round}-${state.currentPlayerIndex}`;
+  const leaving = useLeavingName(turnId, player.name);
   const close = () => setOpen(null);
 
   const run = async (action: () => Promise<ClientResult>) => {
@@ -82,6 +85,10 @@ export function GameScreen({
               className={i === state.currentPlayerIndex ? 'score-chip current' : 'score-chip'}
               aria-current={i === state.currentPlayerIndex ? 'true' : undefined}
             >
+              {/* A new element every turn, so its soft pulse plays once per turn change. */}
+              {i === state.currentPlayerIndex && (
+                <span key={turnId} className="turn-pulse" aria-hidden="true" />
+              )}
               <span className="avatar-circle" style={{ backgroundColor: p.colour }}>
                 {avatarEmoji(p.avatar)}
               </span>
@@ -102,7 +109,17 @@ export function GameScreen({
       <div className="table">
         <section className="dice-area themed-table" ref={areaRef}>
           <div className="turn-heading">
-            <h2 className="turn-banner">{nl.game.turn(player.name)}</h2>
+            {/* The old name fades out while the new one fades in. */}
+            <div className="turn-names">
+              {leaving && (
+                <p className="turn-banner leaving" aria-hidden="true">
+                  {nl.game.turn(leaving)}
+                </p>
+              )}
+              <h2 key={turnId} className="turn-banner">
+                {nl.game.turn(player.name)}
+              </h2>
+            </div>
             <p className="turn-status">{status}</p>
           </div>
           <Dice
@@ -227,6 +244,30 @@ export function GameScreen({
       )}
     </main>
   );
+}
+
+/** How long the old player's name stays to fade out on a turn change. */
+const TURN_FADE_MS = 300;
+
+/**
+ * The previous player's name for a moment after the turn changes, so the heading can
+ * cross-fade. Null otherwise, and always null when the device asks for less motion.
+ */
+function useLeavingName(turnId: string, name: string): string | null {
+  const [leaving, setLeaving] = useState<string | null>(null);
+  const last = useRef({ turnId, name });
+
+  useEffect(() => {
+    const before = last.current;
+    if (before.turnId === turnId) return;
+    last.current = { turnId, name };
+    if (reducedMotion() || before.name === name) return;
+    setLeaving(before.name);
+    const timer = setTimeout(() => setLeaving(null), TURN_FADE_MS);
+    return () => clearTimeout(timer);
+  }, [turnId, name]);
+
+  return leaving;
 }
 
 /** The ☰ button with the less frequent actions: the rules and stopping the game. */

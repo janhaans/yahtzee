@@ -156,49 +156,6 @@
   }
 }
 
-/* Big turn banner: slides in, tap anywhere to skip. */
-.turn-overlay {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgb(31 36 48 / 0.2);
-  z-index: 15;
-  cursor: pointer;
-  animation: overlay-fade 1.6s ease-in-out forwards;
-}
-
-.turn-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 28px 56px;
-  border-radius: 32px;
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 24px 60px rgb(31 36 48 / 0.25);
-  animation: banner-swoosh 1.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
-}
-
-.turn-avatar {
-  width: 120px;
-  height: 120px;
-  font-size: 4rem;
-  animation: avatar-bounce 0.5s ease-in-out 0.3s 2;
-}
-
-.turn-name {
-  font-size: 2.4rem;
-  font-weight: 900;
-}
-
-.turn-cheer {
-  color: var(--accent);
-  font-size: 1.3rem;
-  font-weight: 800;
-}
-
 @keyframes overlay-fade {
   0%,
   80% {
@@ -206,28 +163,6 @@
   }
   100% {
     opacity: 0;
-  }
-}
-
-@keyframes banner-swoosh {
-  0% {
-    transform: translateX(-120vw) rotate(-8deg);
-  }
-  25% {
-    transform: translateX(0) rotate(2deg);
-  }
-  30%,
-  80% {
-    transform: translateX(0) rotate(0);
-  }
-  100% {
-    transform: translateX(120vw) rotate(8deg);
-  }
-}
-
-@keyframes avatar-bounce {
-  50% {
-    transform: translateY(-18px) scale(1.15);
   }
 }
 

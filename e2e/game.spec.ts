@@ -36,7 +36,7 @@ async function latestGame(page: Page) {
 
 /** One turn: roll, hold the first die, roll again and take the first box that can be chosen. */
 async function playTurn(page: Page, name: string) {
-  await expect(page.getByRole('heading', { name: `${name} is aan de beurt!` })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `${name} is aan de beurt` })).toBeVisible();
   await page.getByRole('button', { name: /^Gooien!/ }).click();
   await page.getByRole('button', { name: /^Dobbelsteen 1/ }).click();
   await expect(
@@ -92,7 +92,7 @@ test('two players play a full game of 13 rounds', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Nog een keer' }).click();
   await expect(page.getByText('Ronde 1 van 13')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Emma is aan de beurt!' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Emma is aan de beurt' })).toBeVisible();
 });
 
 test('a game can be stopped early', async ({ page }) => {
@@ -102,7 +102,7 @@ test('a game can be stopped early', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('button', { name: 'Stop spel' }).click();
   await page.getByRole('button', { name: 'Nee, verder spelen' }).click();
-  await expect(page.getByRole('heading', { name: 'Lieke is aan de beurt!' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lieke is aan de beurt' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('button', { name: 'Stop spel' }).click();

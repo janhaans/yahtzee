@@ -8,6 +8,23 @@
   padding-bottom: 26px;
 }
 
+/* A new turn: the dice turn blank, with a short fade. */
+.dice.empty {
+  animation: dice-reset 0.3s ease-out;
+}
+
+@keyframes dice-reset {
+  from {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dice.empty {
+    animation: none;
+  }
+}
+
 /* A die is a button: the CSS cube or the 3D die is drawn inside or over it. */
 .die {
   position: relative;

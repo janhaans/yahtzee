@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -156,10 +156,46 @@ describe('GameScreen', () => {
 
   it('shows whose turn it is, the round and which roll it is', () => {
     render(<GameScreen state={gameWith([1, 2, 3, 4, 6])} actions={fakeActions()} />);
-    expect(screen.getByRole('heading', { name: /Emma is aan de beurt!/ })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Emma is aan de beurt' })).toBeVisible();
     expect(screen.getByText('Ronde 1 van 13')).toBeVisible();
     expect(screen.getByText(/^Worp 1 van 3/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Gooien! nog 2 worpen' })).toBeEnabled();
+  });
+
+  it('changes turns quietly: the ring moves on with a pulse and the name cross-fades', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    const emma = gameWith([1, 2, 3, 4, 6]);
+    const view = render(<GameScreen state={emma} actions={fakeActions()} />);
+    const sara: GameState = { ...emma, currentPlayerIndex: 1, dice: null, rollsUsed: 0 };
+    view.rerender(<GameScreen state={sara} actions={fakeActions()} />);
+
+    expect(screen.getByRole('heading', { name: 'Sara is aan de beurt' })).toBeVisible();
+    // Emma's name fades out, hidden from screen readers, and is then gone.
+    expect(screen.getByText('Emma is aan de beurt')).toHaveAttribute('aria-hidden', 'true');
+    act(() => vi.advanceTimersByTime(400));
+    expect(screen.queryByText('Emma is aan de beurt')).toBeNull();
+
+    const current = screen.getByRole('listitem', { current: true });
+    expect(current).toHaveTextContent('Sara');
+    expect(current.querySelector('.turn-pulse')).not.toBeNull();
+    expect(document.querySelectorAll('.turn-pulse')).toHaveLength(1);
+    expect(document.querySelector('.dice')).toHaveClass('empty');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('changes turns without a fade when the device wants less motion', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    const emma = gameWith([1, 2, 3, 4, 6]);
+    const view = render(<GameScreen state={emma} actions={fakeActions()} />);
+    view.rerender(
+      <GameScreen state={{ ...emma, currentPlayerIndex: 1 }} actions={fakeActions()} />,
+    );
+    expect(screen.getByRole('heading', { name: 'Sara is aan de beurt' })).toBeVisible();
+    expect(screen.queryByText('Emma is aan de beurt')).toBeNull();
+    vi.unstubAllGlobals();
   });
 
   it('opens the rules from the menu and closes the menu with Escape', async () => {
