@@ -7,13 +7,27 @@ import { SetupScreen } from './components/SetupScreen';
 import { StartScreen } from './components/StartScreen';
 import { UnfinishedDialog } from './components/UnfinishedDialog';
 import { nl } from './i18n/nl';
-import { useThemePreference } from './settings';
+import { useMuted, useThemePreference } from './settings';
+import { sound } from './sound/engine';
 import { useGame } from './useGame';
 
 /** The game table on the laptop (route `/`). */
 export function App() {
   const { state, theme: gameTheme, connected, unfinished, saveFailed, actions } = useGame();
   const [preferredTheme, setPreferredTheme] = useThemePreference();
+  const [muted, setMuted] = useMuted();
+
+  useEffect(() => sound.setMuted(muted), [muted]);
+  // Browsers only allow sound after a tap, so every tap or key press unlocks it.
+  useEffect(() => {
+    const unlock = () => sound.unlock();
+    window.addEventListener('pointerdown', unlock, true);
+    window.addEventListener('keydown', unlock, true);
+    return () => {
+      window.removeEventListener('pointerdown', unlock, true);
+      window.removeEventListener('keydown', unlock, true);
+    };
+  }, []);
   const [view, setView] = useState<'start' | 'setup'>('start');
   const recentPlayers = useRecentPlayers(view === 'setup');
   const status = state?.status;
@@ -39,7 +53,7 @@ export function App() {
       </main>
     );
   } else if (state?.status === 'in_progress') {
-    screen = <GameScreen state={state} actions={actions} />;
+    screen = <GameScreen state={state} actions={actions} muted={muted} onMute={setMuted} />;
   } else if (state?.status === 'finished' && view === 'start') {
     screen = (
       <EndScreen
@@ -62,6 +76,8 @@ export function App() {
       <StartScreen
         theme={preferredTheme}
         onTheme={setPreferredTheme}
+        muted={muted}
+        onMute={setMuted}
         onNewGame={() => setView('setup')}
       />
     );

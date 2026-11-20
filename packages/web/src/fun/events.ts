@@ -27,6 +27,13 @@ export type GameEvent =
       readonly yahtzee: boolean;
     }
   | {
+      readonly kind: 'held';
+      readonly seat: number;
+      readonly index: number;
+      /** True when the die is now held, false when it was let go. */
+      readonly held: boolean;
+    }
+  | {
       readonly kind: 'scored';
       readonly seat: number;
       readonly box: BoxId;
@@ -65,6 +72,11 @@ export function gameEvents(prev: GameState | null, next: GameState | null): Game
       roll: next.rollsUsed,
       yahtzee: isYahtzee(next.dice),
     });
+  }
+
+  if (next.rollsUsed === prev.rollsUsed && next.currentPlayerIndex === seat) {
+    const index = next.held.findIndex((isHeld, i) => isHeld !== prev.held[i]);
+    if (index !== -1) events.push({ kind: 'held', seat, index, held: next.held[index]! });
   }
 
   const before = prev.scorecards[seat]!;

@@ -906,3 +906,8 @@ h2 {
     animation: none;
   }
 }
+
+.mute-button {
+  padding: 0 12px;
+  font-size: 1.4rem;
+}

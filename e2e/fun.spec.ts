@@ -49,6 +49,16 @@ test('the chosen theme, avatars and colours are used and saved', async ({ page }
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'snoep');
 });
 
+test('the sound can be switched off and stays off on this device', async ({ page }) => {
+  await startGame(page, 'Voetbalstadion', ['Emma', 'Sara']);
+  await page.getByRole('button', { name: 'Geluid uit' }).click();
+  await expect(page.getByRole('button', { name: 'Geluid aan' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Geluid aan' })).toBeVisible();
+  await page.getByRole('button', { name: 'Geluid aan' }).click();
+  await expect(page.getByRole('button', { name: 'Geluid uit' })).toBeVisible();
+});
+
 test.describe('with animations', () => {
   test.use({ reducedMotion: 'no-preference' });
 

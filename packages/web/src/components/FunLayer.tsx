@@ -3,8 +3,10 @@ import type { GameState } from '@yahtzee/game-logic';
 import type { ThemeId } from '@yahtzee/server/looks';
 import { avatarEmoji } from '../avatars';
 import { MessagePicker, messageKind } from '../fun/messages';
+import { soundsFor } from '../fun/sounds';
 import { nl } from '../i18n/nl';
 import { reducedMotion } from '../motion';
+import { sound } from '../sound/engine';
 import { useGameEvents } from '../useGameEvents';
 
 const BANNER_MS = 1600;
@@ -23,6 +25,7 @@ export function FunLayer({ state, theme }: Props) {
 
   useGameEvents(state, (events) => {
     for (const event of events) {
+      for (const name of soundsFor(event)) sound.play(name, theme);
       if (event.kind === 'turn' && !reducedMotion()) {
         setBanner({ seat: event.seat, id: Date.now() });
       } else if (event.kind === 'scored') {

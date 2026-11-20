@@ -261,6 +261,11 @@ export const nl = {
     },
   } satisfies Record<ThemeId, Record<MessageKind, readonly string[]>>,
 
+  sound: {
+    turnOn: 'Geluid aan',
+    turnOff: 'Geluid uit',
+  },
+
   /** A short cheer under the big turn banner. */
   turnCheer: {
     voetbal: 'Aan de bal!',

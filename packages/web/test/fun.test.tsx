@@ -66,7 +66,10 @@ describe('gameEvents', () => {
       },
     ]);
     const held = ok(toggleHold(first, 1));
-    expect(gameEvents(first, held)).toEqual([]);
+    expect(gameEvents(first, held)).toEqual([{ kind: 'held', seat: 0, index: 1, held: true }]);
+    expect(gameEvents(held, ok(toggleHold(held, 1)))).toEqual([
+      { kind: 'held', seat: 0, index: 1, held: false },
+    ]);
     let n = 0;
     const second = ok(roll(held, () => [0, 0.2, 0.4, 0.6][n++ % 4]!));
     expect(gameEvents(held, second)).toEqual([

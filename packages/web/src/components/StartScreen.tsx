@@ -1,14 +1,23 @@
 import { THEMES as THEME_IDS, type ThemeId } from '@yahtzee/server/looks';
 import { nl } from '../i18n/nl';
 import { THEMES } from '../themes';
+import { MuteButton } from './MuteButton';
 
 interface Props {
   theme: ThemeId;
   onTheme: (theme: ThemeId) => void;
+  muted?: boolean;
+  onMute?: (muted: boolean) => void;
   onNewGame: () => void;
 }
 
-export function StartScreen({ theme, onTheme, onNewGame }: Props) {
+export function StartScreen({
+  theme,
+  onTheme,
+  muted = false,
+  onMute = () => {},
+  onNewGame,
+}: Props) {
   return (
     <main className="screen start-screen">
       <h1 className="logo">{nl.appName}</h1>
@@ -33,9 +42,12 @@ export function StartScreen({ theme, onTheme, onNewGame }: Props) {
         ))}
       </fieldset>
 
-      <button type="button" className="button big" onClick={onNewGame}>
-        {nl.start.newGame}
-      </button>
+      <div className="row">
+        <button type="button" className="button big" onClick={onNewGame}>
+          {nl.start.newGame}
+        </button>
+        <MuteButton muted={muted} onChange={onMute} />
+      </div>
     </main>
   );
 }

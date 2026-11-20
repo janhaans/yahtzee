@@ -12,16 +12,19 @@ import { nl } from '../i18n/nl';
 import type { ClientResult, GameActions } from '../useGame';
 import { Dice } from './Dice';
 import { Dialog } from './Dialog';
+import { MuteButton } from './MuteButton';
 import { ScoreTable } from './ScoreTable';
 
 interface Props {
   state: GameState;
   actions: GameActions;
+  muted?: boolean;
+  onMute?: (muted: boolean) => void;
 }
 
 type Open = { kind: 'confirm'; box: BoxId; points: number } | { kind: 'rules' } | { kind: 'stop' };
 
-export function GameScreen({ state, actions }: Props) {
+export function GameScreen({ state, actions, muted = false, onMute = () => {} }: Props) {
   const [open, setOpen] = useState<Open | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +63,7 @@ export function GameScreen({ state, actions }: Props) {
           ))}
         </ul>
         <span className="menu">
+          <MuteButton muted={muted} onChange={onMute} />
           <button type="button" className="button" onClick={() => setOpen({ kind: 'rules' })}>
             {nl.game.rules}
           </button>
