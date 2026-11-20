@@ -1,18 +1,40 @@
 # @yahtzee/server
 
 Fastify + Socket.IO server that owns the game state and rolls the dice. Clients only send
-intentions (`game:create`, `game:roll`, `game:toggleHold`, `game:chooseBox`, `game:abort`,
-`game:rematch`, `game:resume`, `game:discardUnfinished`; see `src/protocol.ts`). The server
-checks every intention against the game rules, including the Joker rule, and broadcasts the
-new state to every screen.
+intentions (see `src/protocol.ts`): `lobby:*` while a new game is set up, `game:roll`,
+`game:toggleHold`, `game:chooseBox`, `game:abort`, `game:rematch`, `game:resume`,
+`game:discardUnfinished`, `game:takeOver` and `seat:claim`. The server checks every
+intention against the game rules, including the Joker rule, and against who sent it, and
+broadcasts the new state to every screen.
 
-- `src/room.ts` – the one game on this laptop; saves it to the history after every change
+- `src/room.ts` – the one game on this laptop, its seats (laptop or phone) and who may play;
+  saves the game to the history after every change
+- `src/lobby.ts` – the new game while it is set up; phones join it by themselves
+- `src/presence.ts` – which phones are connected right now
+- `src/network.ts` – the laptop's addresses for the QR code, Wi-Fi first
 - `src/app.ts` – Fastify, Socket.IO and, in production, the built web app
 - `src/config.ts` – settings from environment variables
 - `src/history/` – the game history in SQLite (Node's built-in `node:sqlite`)
   - `db.ts` – opens the database and runs schema migrations (`PRAGMA user_version`)
   - `store.ts` – saving games and the queries for the dashboard
   - `routes.ts` – the REST API; `api.ts` – its response types, shared with the web app
+
+## Laptop and phones
+
+- **Who is who.** A screen says who it is when it connects (Socket.IO `auth`). Only a
+  connection from the laptop itself (loopback) that says `role: 'table'` is the game table;
+  it may start and stop games and plays for the laptop players. In development the Vite
+  proxy forwards the real address in `X-Forwarded-For`, which is only trusted from loopback.
+- **Seat tokens.** A phone that joins (`lobby:join`) gets a random seat token, keeps it in
+  localStorage and sends it on every reconnect. The token is its player: a phone can only
+  play its own turns, and the laptop never plays a phone turn unless it took it over.
+  Tokens live in memory only; they stay for "Nog een keer" and are replaced by a new game.
+- **Lost connection.** Socket.IO pings every 5 seconds, so a phone that dropped off is seen
+  within about 10 seconds. After 15 seconds (`TAKE_OVER_AFTER_MS`) the laptop may play the
+  current turn of an offline phone (`game:takeOver`); the next turn is the phone's again.
+- **"Wie ben jij?"** A phone without a seat in the running game can claim a laptop player or
+  a player whose phone is offline (`seat:claim`). After a server restart and "Verder
+  spelen" everyone starts on the laptop and phones take their player back this way.
 
 ## Game history
 

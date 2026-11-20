@@ -1,11 +1,25 @@
 # @yahtzee/web
 
-React + Vite app. For now it holds the game table on the laptop (`/`); the player view
-(`/speler`) and the History Dashboard (`/dashboard`) follow in milestones 5 and 6.
+React + Vite app with the game table on the laptop (`/`) and the player view on a phone
+(`/speler`). The History Dashboard (`/dashboard`) follows in milestone 6.
 
 - All Dutch text lives in `src/i18n/nl.ts`, including the funny messages and titles.
 - `src/useGame.ts` connects to the server; the UI only sends intentions.
-- `src/settings.ts` keeps this device's theme and mute setting in localStorage.
+- `src/settings.ts` keeps this device's theme, mute setting, chosen QR address and, on a
+  phone, its seat token and last name and looks in localStorage.
+
+## Playing from a phone (milestone 5)
+
+- **Laptop**: the setup screen shows the server's lobby and a QR code
+  (`src/components/JoinPanel.tsx`, drawn locally by `QrCode.tsx` with the `qrcode` package)
+  with the address as text under it. "Ander adres kiezen" (also in the ☰ menu as "Telefoon
+  koppelen") picks another address when the laptop has several.
+- **Phone** (`src/phone/`): `PlayerApp.tsx` picks the screen: join form, waiting room, the
+  game, the end screen, or "Wie ben jij?" when a game runs without this phone.
+- **Game screen**: `GameScreen` takes the seats and, on a phone, `me`. It only offers the
+  roll button and point previews to whoever may play the turn; a waiting phone shows its own
+  scorecard. "Wachten op …" and the laptop's "Speel deze beurt op de laptop" come from the
+  seat's `offlineSince`.
 
 ## Look
 

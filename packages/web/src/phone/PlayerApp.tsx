@@ -6,6 +6,7 @@ import { FunLayer } from '../components/FunLayer';
 import { GameScreen } from '../components/GameScreen';
 import { MuteButton } from '../components/MuteButton';
 import { nl } from '../i18n/nl';
+import { reducedMotion } from '../motion';
 import { readSeatToken, useMuted, writeSeatToken } from '../settings';
 import { useDeviceSound } from '../sound/useDeviceSound';
 import { useConnection } from '../useGame';
@@ -16,11 +17,17 @@ import { WhoAreYou } from './WhoAreYou';
 /** A phone sends its seat token on every (re)connect, so it gets its player back. */
 const phoneHello = (): Hello => ({ role: 'phone', token: readSeatToken() });
 
-/** A short buzz when it becomes this phone's turn (Android; iPhones cannot vibrate from a web page). */
-function useYourTurnBuzz(myTurn: boolean): void {
+/**
+ * When it becomes this phone's turn: back up to the dice (the box was chosen far down the
+ * scorecard last time) and a short buzz (Android; iPhones cannot vibrate from a web page).
+ */
+function useYourTurn(myTurn: boolean): void {
   const before = useRef(myTurn);
   useEffect(() => {
-    if (myTurn && !before.current) navigator.vibrate?.(200);
+    if (myTurn && !before.current) {
+      window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' });
+      navigator.vibrate?.(200);
+    }
     before.current = myTurn;
   }, [myTurn]);
 }
@@ -44,7 +51,7 @@ export function PlayerApp() {
   const inGame = !!state && state.players.some((p) => p.id === you);
   const myTurn =
     state?.status === 'in_progress' && state.players[state.currentPlayerIndex]?.id === you;
-  useYourTurnBuzz(myTurn);
+  useYourTurn(myTurn);
   const theme = lobby?.theme ?? gameTheme ?? DEFAULT_THEME;
   useEffect(() => {
     document.documentElement.dataset.theme = theme;

@@ -81,6 +81,11 @@
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
+  /*
+   * The turned-away faces still catch taps, and in 3D they reach over the next dice, so a
+   * tap could hold the wrong die. The die button itself takes the tap.
+   */
+  pointer-events: none;
 }
 
 .cube-dice.rolling .cube {

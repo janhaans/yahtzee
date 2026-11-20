@@ -50,7 +50,7 @@ follow it. If something in the PRD is unclear or conflicts, ask before guessing.
 
 - `npm install` – install dependencies
 - `npm run dev` – start server and web app for development
-- `npm start` – start for playing (listens on the home network)
+- `npm start` – start for playing (listens on the home network; phones: see `docs/phones.md`)
 - `npm test` – run all unit tests
 - `npm run test:e2e` – run Playwright tests (first time: `npx playwright install chromium`)
 - `npm run typecheck`, `npm run lint`, `npm run format` – checks and formatting
