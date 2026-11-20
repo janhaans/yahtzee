@@ -4,6 +4,7 @@ import {
   Matrix4,
   Mesh,
   MeshStandardMaterial,
+  PCFSoftShadowMap,
   PerspectiveCamera,
   PlaneGeometry,
   Quaternion,
@@ -73,8 +74,8 @@ export class DiceTable {
   readonly #renderer: WebGLRenderer;
   readonly #scene = new Scene();
   readonly #camera = new PerspectiveCamera(FOV, 1, 0.1, 500);
-  readonly #light = new DirectionalLight(0xffffff, 2.2);
-  readonly #shadow = new Mesh(new PlaneGeometry(1, 1), new ShadowMaterial({ opacity: 0.28 }));
+  readonly #light = new DirectionalLight(0xffffff, 1.5);
+  readonly #shadow = new Mesh(new PlaneGeometry(1, 1), new ShadowMaterial({ opacity: 0.14 }));
   readonly #geometry = new RoundedBoxGeometry(1, 1, 1, 4, 0.14);
   readonly #dice: Mesh<RoundedBoxGeometry, MeshStandardMaterial[]>[];
   /** Which value each face of each die shows. */
@@ -96,10 +97,13 @@ export class DiceTable {
     this.#renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true });
     this.#renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.#renderer.shadowMap.enabled = true;
+    this.#renderer.shadowMap.type = PCFSoftShadowMap;
     this.#camera.up.set(0, 0, -1);
 
-    this.#scene.add(new AmbientLight(0xffffff, 1.4));
-    this.#light.position.set(-2, 14, 3);
+    this.#scene.add(new AmbientLight(0xffffff, 2.1));
+    // Almost straight above, so the white faces stay white and the shadow falls under the die.
+    this.#light.position.set(-1, 14, 1.5);
+    this.#light.shadow.radius = 6;
     this.#light.castShadow = true;
     this.#light.shadow.mapSize.set(1024, 1024);
     this.#scene.add(this.#light);
@@ -110,7 +114,7 @@ export class DiceTable {
     this.#dice = VALUES.slice(0, 5).map(() => {
       const mesh = new Mesh(
         this.#geometry,
-        FACE_NORMALS.map(() => new MeshStandardMaterial({ roughness: 0.45 })),
+        FACE_NORMALS.map(() => new MeshStandardMaterial({ roughness: 0.6 })),
       );
       mesh.castShadow = true;
       mesh.visible = false;

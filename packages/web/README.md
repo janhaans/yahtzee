@@ -7,10 +7,20 @@ React + Vite app. For now it holds the game table on the laptop (`/`); the playe
 - `src/useGame.ts` connects to the server; the UI only sends intentions.
 - `src/settings.ts` keeps this device's theme and mute setting in localStorage.
 
+## Look
+
+The design follows the mockups in `docs/design/`: a light page, white cards with soft shadows,
+the Nunito font (bundled through `@fontsource-variable/nunito`, so it works offline) and one
+accent colour per theme. Styles live in `src/styles/`, one file per screen plus `base.css`
+(colours, buttons, cards, dialogs), `themes.css` (accent and the subtle chalk lines or
+sprinkles), `dice.css` and `fun.css` (messages, banners, celebrations). Each screen has a
+phone layout below 600 px.
+
 ## Fun layer (milestone 4)
 
-- **Themes**: `src/themes.css` (colours and backgrounds per `[data-theme]`) and
-  `src/themes/index.ts` (dice looks as data, so dice skins can be added later).
+- **Themes**: `src/styles/themes.css` (accent and table details per `[data-theme]`) and
+  `src/themes/index.ts` (dice looks as data: the themes use plain white dice; the football
+  and sugar looks are kept as dice skins for later).
 - **Events**: `src/fun/events.ts` compares two game states and says what happened (roll,
   hold, scored box, next turn, game over). Messages, sounds, banners and celebrations all
   react to these events, so phones can reuse them.
