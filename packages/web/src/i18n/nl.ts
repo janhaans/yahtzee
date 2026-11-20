@@ -349,6 +349,7 @@ export const nl = {
     off: 'Geluid uit',
     turnOn: 'Geluid aan',
     turnOff: 'Geluid uit',
+    tapToUnlock: 'Tik om geluid aan te zetten 🔊',
   },
 
   game: {

@@ -9,7 +9,9 @@ const EXTENSIONS = ['mp3', 'ogg', 'wav'];
 
 /**
  * Plays the game sounds on this device. Browsers (iPhones most of all) only allow sound after
- * the first tap, so `unlock()` is called on every tap; until then sounds are skipped.
+ * a tap, so `unlock()` is called on every tap; until then sounds are skipped. iOS also stops
+ * the sound again when the screen locks or a call comes in (state "interrupted"); the next
+ * tap starts it again.
  */
 export class SoundEngine {
   #ctx: AudioContext | null = null;
@@ -17,6 +19,7 @@ export class SoundEngine {
   #muted = false;
   /** A decoded recording, null when it is missing, absent while it is still loading. */
   readonly #recordings = new Map<Recording, AudioBuffer | null>();
+  readonly #listeners = new Set<() => void>();
 
   constructor(
     private readonly createContext: () => AudioContext = () => new AudioContext(),
@@ -32,19 +35,52 @@ export class SoundEngine {
     if (this.#master) this.#master.gain.value = muted ? 0 : 1;
   }
 
+  /** True until sound may play: before the first tap, and after iOS interrupted it. */
+  get locked(): boolean {
+    return this.#ctx?.state !== 'running';
+  }
+
+  /** Calls `listener` when `locked` may have changed. Returns a function to stop. */
+  subscribe(listener: () => void): () => void {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+
+  /** Must be called from inside a tap, click or key handler, or the browser says no. */
   unlock(): void {
     if (!this.#ctx) {
+      let ctx: AudioContext;
       try {
-        this.#ctx = this.createContext();
+        ctx = this.createContext();
       } catch {
         return; // No Web Audio: the game simply stays quiet.
       }
-      this.#master = this.#ctx.createGain();
+      this.#ctx = ctx;
+      ctx.onstatechange = () => this.#changed();
+      playThroughSilentSwitch();
+      this.#master = ctx.createGain();
       this.#master.gain.value = this.#muted ? 0 : 1;
-      this.#master.connect(this.#ctx.destination);
-      for (const recording of RECORDINGS) void this.#loadRecording(this.#ctx, recording);
+      this.#master.connect(ctx.destination);
+      for (const recording of RECORDINGS) void this.#loadRecording(ctx, recording);
     }
-    if (this.#ctx.state === 'suspended') void this.#ctx.resume();
+    const ctx = this.#ctx;
+    // "suspended" before the first tap; "interrupted" on iOS after a lock screen or a call.
+    if (ctx.state !== 'running' && ctx.state !== 'closed') {
+      void ctx.resume().then(
+        () => this.#changed(),
+        () => {}, // Not allowed yet: the next tap tries again.
+      );
+      // Older iPhones only really start after a sound is played inside the tap itself.
+      const silence = ctx.createBufferSource();
+      silence.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      silence.connect(ctx.destination);
+      silence.start(0);
+    }
+    this.#changed();
+  }
+
+  #changed(): void {
+    for (const listener of this.#listeners) listener();
   }
 
   play(name: SoundName, theme: ThemeId): void {
@@ -98,6 +134,17 @@ export class SoundEngine {
     }
     this.#recordings.set(recording, null);
   }
+}
+
+/**
+ * An iPhone mutes web sound when its ring/silent switch is on. The game has its own mute
+ * button on every phone, so it asks for the "playback" audio session (Safari 16.4+), which
+ * plays anyway. Other browsers do not have this and are not affected.
+ */
+function playThroughSilentSwitch(): void {
+  const session = (globalThis.navigator as { audioSession?: { type: string } } | undefined)
+    ?.audioSession;
+  if (session) session.type = 'playback';
 }
 
 /** The one sound engine of this page. */

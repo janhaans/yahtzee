@@ -44,7 +44,10 @@ points at port 5173.
   `https://` are not used: the screen may lock during long waits (it reconnects when it
   wakes up) and shake-to-roll is not possible.
 - Phones buzz on their turn on Android; iPhones do not allow vibration from a web page.
-- Sound on an iPhone starts after the first tap. Each phone has its own mute button.
+- Sound on a phone starts after the first tap; until then (and on an iPhone again after the
+  screen was locked or a call came in) the phone shows "Tik om geluid aan te zetten 🔊".
+- On an iPhone the game also plays when the ring/silent switch is on (Safari 16.4 and
+  newer); use the game's own mute button for quiet. Each phone has its own mute button.
 
 ## Checklist for real phones
 
@@ -62,3 +65,5 @@ phone and a real iPhone before a release:
       15 seconds can take the turn over; with Wi-Fi back the phone plays its next turn.
 - [ ] Open the page in a private tab: "Wie ben jij?" offers the offline player.
 - [ ] Sounds and the Yahtzee celebration play on the phone; its mute button works.
+- [ ] iPhone: lock and unlock the screen; "Tik om geluid aan te zetten" shows, one tap
+      brings the sound back. With the silent switch on, the game still plays sound.

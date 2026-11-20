@@ -11,6 +11,7 @@ import { readSeatToken, useMuted, writeSeatToken } from '../settings';
 import { useDeviceSound } from '../sound/useDeviceSound';
 import { useConnection } from '../useGame';
 import { JoinForm } from './JoinForm';
+import { SoundHint } from './SoundHint';
 import { WaitingRoom } from './WaitingRoom';
 import { WhoAreYou } from './WhoAreYou';
 
@@ -58,16 +59,13 @@ export function PlayerApp() {
   }, [theme]);
 
   let screen;
+  // The game and the end screen fill the page themselves; the other screens get a header.
+  let page;
   if (state === undefined) {
     screen = <p className="hint">{nl.start.connecting}</p>;
   } else if (state?.status === 'in_progress' && inGame) {
-    return (
+    page = (
       <>
-        {!connected && (
-          <p className="connection-banner" role="status">
-            {nl.errors.disconnected}
-          </p>
-        )}
         <GameScreen
           state={state}
           actions={actions}
@@ -92,7 +90,7 @@ export function PlayerApp() {
   } else if (lobby) {
     screen = <JoinForm lobby={lobby} onJoin={lobbyActions.join} />;
   } else if (state?.status === 'finished' && inGame) {
-    return (
+    page = (
       <>
         <EndScreen state={state} theme={theme} />
         <FunLayer state={state} theme={theme} />
@@ -116,13 +114,16 @@ export function PlayerApp() {
           {nl.errors.disconnected}
         </p>
       )}
-      <main className="screen phone-screen">
-        <header className="phone-header">
-          <span className="phone-brand">{nl.appName}</span>
-          <MuteButton muted={muted} onChange={setMuted} />
-        </header>
-        {screen}
-      </main>
+      {page ?? (
+        <main className="screen phone-screen">
+          <header className="phone-header">
+            <span className="phone-brand">{nl.appName}</span>
+            <MuteButton muted={muted} onChange={setMuted} />
+          </header>
+          {screen}
+        </main>
+      )}
+      {!muted && <SoundHint />}
     </>
   );
 }

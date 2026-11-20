@@ -173,6 +173,62 @@ describe('SoundEngine', () => {
     expect(recordings).toHaveLength(1); // "GOOOAL!" from the file; the crowd is made up.
   });
 
+  it('starts again after iOS interrupted the sound, and tells who is listening', async () => {
+    const { ctx, sources } = fakeAudio();
+    const engine = new SoundEngine(() => ctx as unknown as AudioContext, files());
+    const listener = vi.fn();
+    const stop = engine.subscribe(listener);
+    expect(engine.locked).toBe(true);
+
+    engine.unlock();
+    await settle();
+    expect(engine.locked).toBe(false);
+    expect(listener).toHaveBeenCalled();
+    // A silent sound is played inside the tap, which older iPhones need to really start.
+    expect(sources[0]!.start).toHaveBeenCalledWith(0);
+
+    // The screen was locked: iOS says "interrupted", and nothing plays until the next tap.
+    ctx.state = 'interrupted';
+    (ctx as unknown as AudioContext).onstatechange?.(new Event('statechange'));
+    expect(engine.locked).toBe(true);
+    const oscillators = ctx.createOscillator.mock.calls.length;
+    engine.play('turn', 'snoep');
+    expect(ctx.createOscillator.mock.calls.length).toBe(oscillators);
+    engine.unlock();
+    await settle();
+    expect(ctx.resume).toHaveBeenCalledTimes(2);
+    expect(engine.locked).toBe(false);
+
+    // Running already: a tap changes nothing.
+    engine.unlock();
+    expect(ctx.resume).toHaveBeenCalledTimes(2);
+    stop();
+    listener.mockClear();
+    engine.unlock();
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('tries again on the next tap when the browser says no', async () => {
+    const { ctx } = fakeAudio();
+    ctx.resume.mockImplementationOnce(() => Promise.reject(new Error('not allowed')));
+    const engine = new SoundEngine(() => ctx as unknown as AudioContext, files());
+    engine.unlock();
+    await settle();
+    expect(engine.locked).toBe(true);
+    engine.unlock();
+    await settle();
+    expect(engine.locked).toBe(false);
+  });
+
+  it("plays through an iPhone's silent switch, since the game has its own mute button", () => {
+    const session = { type: 'auto' };
+    vi.stubGlobal('navigator', { audioSession: session });
+    const { ctx } = fakeAudio();
+    new SoundEngine(() => ctx as unknown as AudioContext, files()).unlock();
+    expect(session.type).toBe('playback');
+    vi.unstubAllGlobals();
+  });
+
   it('keeps quiet when the device has no Web Audio', () => {
     const engine = new SoundEngine(() => {
       throw new Error('no audio');

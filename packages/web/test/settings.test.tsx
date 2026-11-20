@@ -5,6 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { StartScreen } from '../src/components/StartScreen';
 import { useMuted, useThemePreference } from '../src/settings';
+import { sound } from '../src/sound/engine';
+import { useDeviceSound } from '../src/sound/useDeviceSound';
 
 afterEach(() => {
   cleanup();
@@ -67,5 +69,21 @@ describe('StartScreen', () => {
     expect(sound).toHaveTextContent('Geluid uit');
     await userEvent.click(sound);
     expect(onMute).toHaveBeenCalledWith(false);
+  });
+});
+
+describe('useDeviceSound', () => {
+  it('unlocks sound on taps that browsers count: also when a finger lets go', () => {
+    const unlock = vi.spyOn(sound, 'unlock').mockImplementation(() => {});
+    renderHook(() => useDeviceSound(false));
+    for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {
+      window.dispatchEvent(new Event(type));
+    }
+    expect(unlock).toHaveBeenCalledTimes(5);
+  });
+
+  it('starts with sound on for a new device', () => {
+    renderHook(() => useDeviceSound(useMuted()[0]));
+    expect(sound.muted).toBe(false);
   });
 });

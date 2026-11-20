@@ -93,9 +93,11 @@ export async function buildApp(options: {
       );
     }
     await fastify.register(fastifyStatic, { root: WEB_DIST });
-    // Client-side pages (/, /speler, /dashboard) all load the same index.html.
+    // Client-side pages (/, /speler, /dashboard) all load the same index.html. A missing
+    // file (like an optional sound) is a plain 404, not the web page.
     fastify.setNotFoundHandler((request, reply) => {
-      if (request.method === 'GET' && !request.url.startsWith('/api/')) {
+      const path = request.url.split('?')[0]!;
+      if (request.method === 'GET' && !path.startsWith('/api/') && !/\.\w+$/.test(path)) {
         return reply.sendFile('index.html');
       }
       return reply.code(404).send();

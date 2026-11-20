@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createGame, type GameState } from '@yahtzee/game-logic';
 import type { LobbyPlayer, LobbyState, SeatInfo } from '@yahtzee/server/protocol';
 import { JoinForm } from '../src/phone/JoinForm';
+import { SoundHint } from '../src/phone/SoundHint';
+import { sound } from '../src/sound/engine';
 import { WaitingRoom } from '../src/phone/WaitingRoom';
 import { WhoAreYou } from '../src/phone/WhoAreYou';
 import { readProfile, readSeatToken, writeProfile, writeSeatToken } from '../src/settings';
@@ -149,6 +151,31 @@ describe('WhoAreYou', () => {
     render(<WhoAreYou state={state()} seats={seats} onClaim={onClaim} />);
     await userEvent.click(screen.getByRole('button', { name: /Emma/ }));
     expect(screen.getByRole('alert')).toHaveTextContent('andere telefoon');
+  });
+});
+
+describe('SoundHint', () => {
+  it('asks for a tap while the phone blocks sound, and goes away once it plays', async () => {
+    let locked = true;
+    let notify = () => {};
+    vi.spyOn(sound, 'locked', 'get').mockImplementation(() => locked);
+    vi.spyOn(sound, 'subscribe').mockImplementation((listener) => {
+      notify = listener;
+      return () => {};
+    });
+    const unlock = vi.spyOn(sound, 'unlock').mockImplementation(() => {
+      locked = false;
+      notify();
+    });
+    render(<SoundHint />);
+    await userEvent.click(screen.getByRole('button', { name: 'Tik om geluid aan te zetten 🔊' }));
+    expect(unlock).toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /Tik om geluid/ })).toBeNull();
+
+    // iOS stopped the sound (screen lock): the hint comes back.
+    locked = true;
+    act(() => notify());
+    expect(screen.getByRole('button', { name: /Tik om geluid/ })).toBeVisible();
   });
 });
 
