@@ -53,7 +53,9 @@ export function App() {
       </main>
     );
   } else if (state?.status === 'in_progress') {
-    screen = <GameScreen state={state} actions={actions} muted={muted} onMute={setMuted} />;
+    screen = (
+      <GameScreen state={state} actions={actions} theme={theme} muted={muted} onMute={setMuted} />
+    );
   } else if (state?.status === 'finished' && view === 'start') {
     screen = (
       <EndScreen

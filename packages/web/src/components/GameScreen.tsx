@@ -7,6 +7,7 @@ import {
   type BoxId,
   type GameState,
 } from '@yahtzee/game-logic';
+import { DEFAULT_THEME, type ThemeId } from '@yahtzee/server/looks';
 import { avatarEmoji } from '../avatars';
 import { nl } from '../i18n/nl';
 import type { ClientResult, GameActions } from '../useGame';
@@ -18,13 +19,20 @@ import { ScoreTable } from './ScoreTable';
 interface Props {
   state: GameState;
   actions: GameActions;
+  theme?: ThemeId;
   muted?: boolean;
   onMute?: (muted: boolean) => void;
 }
 
 type Open = { kind: 'confirm'; box: BoxId; points: number } | { kind: 'rules' } | { kind: 'stop' };
 
-export function GameScreen({ state, actions, muted = false, onMute = () => {} }: Props) {
+export function GameScreen({
+  state,
+  actions,
+  theme = DEFAULT_THEME,
+  muted = false,
+  onMute = () => {},
+}: Props) {
   const [open, setOpen] = useState<Open | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,6 +91,8 @@ export function GameScreen({ state, actions, muted = false, onMute = () => {} }:
             held={state.held}
             canHold={state.dice !== null && rollsLeft > 0}
             onToggle={(index) => run(() => actions.toggleHold(index))}
+            theme={theme}
+            rollId={`${state.round}-${state.currentPlayerIndex}-${state.rollsUsed}`}
           />
           <button
             type="button"

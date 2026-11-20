@@ -911,3 +911,121 @@ h2 {
   padding: 0 12px;
   font-size: 1.4rem;
 }
+
+/* CSS 3D dice: five cubes that tumble onto the rolled values. */
+.cube-dice .die {
+  width: 92px;
+  height: 92px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  perspective: 500px;
+}
+
+.cube {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.cube-dice.rolling .cube {
+  transition: transform 0.8s cubic-bezier(0.2, 0.85, 0.35, 1.05);
+}
+
+.cube-face {
+  position: absolute;
+  inset: 0;
+  padding: 12px;
+  border: 3px solid var(--die-edge);
+  border-radius: var(--die-rounding);
+  background: var(--die-face);
+  backface-visibility: hidden;
+}
+
+.cube-face .pip {
+  background: var(--die-pip);
+}
+
+.cube-face .pip.empty {
+  background: transparent;
+}
+
+.face-1 {
+  transform: translateZ(46px);
+}
+
+.face-2 {
+  transform: rotateY(90deg) translateZ(46px);
+}
+
+.face-3 {
+  transform: rotateX(90deg) translateZ(46px);
+}
+
+.face-4 {
+  transform: rotateX(-90deg) translateZ(46px);
+}
+
+.face-5 {
+  transform: rotateY(-90deg) translateZ(46px);
+}
+
+.face-6 {
+  transform: rotateY(180deg) translateZ(46px);
+}
+
+/* Football: grey patches in the corners, behind the pips. */
+.cube-dice[data-pattern='football'] .cube-face {
+  background:
+    radial-gradient(circle at 0 0, var(--die-pattern) 0 16px, transparent 17px),
+    radial-gradient(circle at 100% 0, var(--die-pattern) 0 16px, transparent 17px),
+    radial-gradient(circle at 0 100%, var(--die-pattern) 0 16px, transparent 17px),
+    radial-gradient(circle at 100% 100%, var(--die-pattern) 0 16px, transparent 17px),
+    var(--die-face);
+}
+
+/* Sugar cube: little sugar crystals. */
+.cube-dice[data-pattern='sugar'] .cube-face {
+  background:
+    radial-gradient(circle at 20% 30%, var(--die-pattern) 0 2px, transparent 3px) 0 0 / 22px 22px,
+    radial-gradient(circle at 70% 60%, var(--die-pattern) 0 1.5px, transparent 2.5px) 0 0 / 17px
+      17px,
+    var(--die-face);
+}
+
+/* Held dice stay put, wiggle and glow. */
+.cube-dice .die.held {
+  transform: none;
+  box-shadow: none;
+  animation: held-wiggle 1.2s ease-in-out infinite;
+}
+
+.cube-dice .die.held .cube-face {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px var(--primary),
+    0 0 18px 6px var(--accent);
+}
+
+@keyframes held-wiggle {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  70% {
+    transform: rotate(-6deg);
+  }
+  80% {
+    transform: rotate(6deg);
+  }
+  90% {
+    transform: rotate(-3deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cube-dice .die.held {
+    animation: none;
+  }
+}
