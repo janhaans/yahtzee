@@ -1,22 +1,17 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { MAX_NAME_LENGTH, MAX_PLAYERS, MIN_PLAYERS, nameKey } from '@yahtzee/game-logic';
-import {
-  AVATARS,
-  COLOURS,
-  isAvatar,
-  isColour,
-  type AvatarId,
-  type Colour,
-} from '@yahtzee/server/looks';
+import { isAvatar, isColour, type AvatarId } from '@yahtzee/server/looks';
 import type { LobbyChange, LobbyPlayer, LobbyState } from '@yahtzee/server/protocol';
 import type { RecentPlayer } from '../api';
 import { avatarEmoji } from '../avatars';
 import { nl } from '../i18n/nl';
 import { reducedMotion } from '../motion';
+import { sound } from '../sound/engine';
 import type { ClientResult, LobbyActions } from '../useGame';
 import { Dialog } from './Dialog';
 import { BackIcon } from './Icons';
 import { JoinPanel } from './JoinPanel';
+import { AvatarGrid, ColourPicker } from './Looks';
 
 interface Props {
   /** The new game as the server has it; phones join it by themselves. */
@@ -46,6 +41,14 @@ export function SetupScreen({ lobby, actions, onBack, recentPlayers = [] }: Prop
   const [shuffling, setShuffling] = useState(false);
   const shuffleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(shuffleTimer.current), []);
+
+  // A happy sound when someone joins with a phone (their row also pops in).
+  const phones = rows.filter((row) => row.controller === 'phone').length;
+  const lastPhones = useRef(phones);
+  useEffect(() => {
+    if (phones > lastPhones.current) sound.play('bonus', theme);
+    lastPhones.current = phones;
+  }, [phones, theme]);
 
   // The server checks everything; its answer only decides which friendly message shows.
   const run = async (action: () => Promise<ClientResult>) => {
@@ -148,7 +151,7 @@ export function SetupScreen({ lobby, actions, onBack, recentPlayers = [] }: Prop
                     <NameInput value={row.name} onChange={(name) => update(row, { name })} />
                   </label>
                   <ColourPicker
-                    seat={i}
+                    label={nl.setup.colours(i + 1)}
                     value={row.colour}
                     taken={rows.filter((r) => r !== row).map((r) => r.colour)}
                     onPick={(colour) => update(row, { colour })}
@@ -246,37 +249,6 @@ function NameInput({ value, onChange }: { value: string; onChange: (name: string
   );
 }
 
-interface ColourPickerProps {
-  seat: number;
-  value: Colour;
-  /** Colours of the other players; colours must be unique in a game. */
-  taken: readonly string[];
-  onPick: (colour: Colour) => void;
-}
-
-function ColourPicker({ seat, value, taken, onPick }: ColourPickerProps) {
-  return (
-    <div className="colour-picker" role="group" aria-label={nl.setup.colours(seat + 1)}>
-      {COLOURS.map((colour) => {
-        const isTaken = taken.includes(colour);
-        const name = nl.colours[colour];
-        return (
-          <button
-            key={colour}
-            type="button"
-            className="swatch"
-            style={{ backgroundColor: colour, color: colour }}
-            aria-pressed={colour === value}
-            aria-label={isTaken ? nl.setup.colourTaken(name) : name}
-            disabled={isTaken}
-            onClick={() => onPick(colour)}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 interface AvatarDialogProps {
   seat: number;
   value: AvatarId;
@@ -295,20 +267,7 @@ function AvatarDialog({ seat, value, onPick, onClose }: AvatarDialogProps) {
         </button>
       }
     >
-      <div className="avatar-grid">
-        {AVATARS.map((avatar) => (
-          <button
-            key={avatar}
-            type="button"
-            className="avatar-choice"
-            aria-pressed={avatar === value}
-            aria-label={nl.avatars[avatar]}
-            onClick={() => onPick(avatar)}
-          >
-            {avatarEmoji(avatar)}
-          </button>
-        ))}
-      </div>
+      <AvatarGrid value={value} onPick={onPick} />
     </Dialog>
   );
 }

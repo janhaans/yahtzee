@@ -1,5 +1,12 @@
 import { useCallback, useState } from 'react';
-import { DEFAULT_THEME, isTheme, type ThemeId } from '@yahtzee/server/looks';
+import {
+  DEFAULT_THEME,
+  isAvatar,
+  isColour,
+  isTheme,
+  type NewPlayer,
+  type ThemeId,
+} from '@yahtzee/server/looks';
 
 /**
  * Settings of this device (theme, sound), kept in localStorage. Storage can be missing or
@@ -61,4 +68,40 @@ const parseText = (raw: string | null): string => raw ?? '';
  */
 export function useJoinChoice() {
   return useStored<string>(JOIN_KEY, parseText, same);
+}
+
+const SEAT_KEY = 'yahtzee.seat';
+const PROFILE_KEY = 'yahtzee.me';
+
+/**
+ * The seat token of this phone. The phone sends it on every (re)connect, so it gets its
+ * player back after a lost connection. Without storage the token lives in this page only.
+ */
+let seatInPage: string | null = null;
+
+export function readSeatToken(): string | null {
+  return read(SEAT_KEY) ?? seatInPage;
+}
+
+export function writeSeatToken(token: string): void {
+  seatInPage = token;
+  write(SEAT_KEY, token);
+}
+
+/** The name and looks this phone joined with last time, to join again with one tap. */
+export function readProfile(): Partial<NewPlayer> {
+  try {
+    const raw = JSON.parse(read(PROFILE_KEY) ?? '{}') as Record<string, unknown>;
+    return {
+      ...(typeof raw.name === 'string' && { name: raw.name }),
+      ...(isAvatar(raw.avatar) && { avatar: raw.avatar }),
+      ...(isColour(raw.colour) && { colour: raw.colour }),
+    };
+  } catch {
+    return {};
+  }
+}
+
+export function writeProfile(player: NewPlayer): void {
+  write(PROFILE_KEY, JSON.stringify(player));
 }

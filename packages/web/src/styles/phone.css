@@ -1,0 +1,115 @@
+/* The player view on a phone (/speler), before and around the game */
+.phone-screen {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.phone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.phone-brand {
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+
+.phone-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.phone-card h1 {
+  font-size: 1.8rem;
+  line-height: 1.2;
+}
+
+.phone-card h2 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.join-form .name-field {
+  flex: none;
+}
+
+.waiting-room {
+  align-items: center;
+  text-align: center;
+}
+
+.waiting-room > * {
+  align-self: stretch;
+}
+
+.waiting-room > .avatar-circle {
+  align-self: center;
+}
+
+.avatar-circle.big {
+  width: 96px;
+  height: 96px;
+  font-size: 3rem;
+}
+
+.lobby-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.lobby-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: var(--radius-inner);
+  background: var(--surface-2);
+  font-weight: 800;
+}
+
+.lobby-list .name {
+  flex: 1;
+}
+
+@media (max-width: 400px) {
+  .phone-card {
+    padding: 16px;
+  }
+}
+
+/* On the laptop: a phone player pops into the setup list when they join. */
+.phone-player .avatar-button {
+  display: inline-grid;
+  place-items: center;
+  cursor: default;
+}
+
+.player-row.phone-player {
+  animation: pop-in 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-row.phone-player {
+    animation: none;
+  }
+}

@@ -20,6 +20,7 @@ import { SetupScreen } from '../src/components/SetupScreen';
 import { UnfinishedDialog } from '../src/components/UnfinishedDialog';
 import { fetchRecentPlayers } from '../src/api';
 import { formatDateTime } from '../src/format';
+import { sound } from '../src/sound/engine';
 import type { ThemeId } from '@yahtzee/server/looks';
 import type { ActionResult } from '@yahtzee/server/protocol';
 import { Lobby } from '../../server/src/lobby';
@@ -300,9 +301,12 @@ describe('SetupScreen', () => {
   });
 
   it('shows phone players as they join, and can send them away', async () => {
+    const play = vi.spyOn(sound, 'play').mockImplementation(() => {});
     const setup = renderSetup();
     await userEvent.type(screen.getAllByRole('textbox')[0]!, 'Emma');
+    expect(play).not.toHaveBeenCalled();
     setup.join('Sara', '#c62828');
+    expect(play).toHaveBeenCalledWith('bonus', 'voetbal');
     setup.join('Noor', '#00838f', false);
 
     // Sara took the empty second row; Noor came last.
@@ -319,6 +323,7 @@ describe('SetupScreen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
     expect(names(setup.started())).toEqual(['Emma', 'Sara']);
     expect(setup.room.seats.map((seat) => seat.controller)).toEqual(['table', 'phone']);
+    vi.restoreAllMocks();
   });
 });
 

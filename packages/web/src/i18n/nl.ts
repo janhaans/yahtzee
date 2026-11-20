@@ -127,6 +127,25 @@ export const nl = {
     menu: 'Telefoon koppelen',
   },
 
+  /** The player view on a phone (/speler). */
+  phone: {
+    waitingForGame: 'Wachten tot er op de laptop een nieuw spel begint...',
+    waitingHint: 'Tik op de laptop op "Nieuw spel", dan kun je hier meedoen.',
+    joinTitle: 'Doe mee!',
+    nameLabel: 'Hoe heet je?',
+    avatarLabel: 'Kies je plaatje',
+    colourLabel: 'Kies je kleur',
+    join: 'Doe mee!',
+    joined: (name: string) => `Je doet mee, ${name}!`,
+    waitingForStart: 'Zodra iemand op de laptop op start tikt, begint het spel.',
+    players: 'Wie doen er mee?',
+    you: '(jij)',
+    changeLooks: 'Plaatje of kleur veranderen',
+    done: 'Klaar',
+    leave: 'Toch niet meedoen',
+    gameRunning: 'Er wordt al gespeeld! Bij het volgende spel kun je meedoen.',
+  },
+
   avatars: {
     football: 'Voetbal',
     glove: 'Keepershandschoen',

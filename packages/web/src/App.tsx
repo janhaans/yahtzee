@@ -9,7 +9,7 @@ import { UnfinishedDialog } from './components/UnfinishedDialog';
 import { nl } from './i18n/nl';
 import { useMuted, useThemePreference } from './settings';
 import { canUse3D } from './dice3d/support';
-import { sound } from './sound/engine';
+import { useDeviceSound } from './sound/useDeviceSound';
 import { useGame } from './useGame';
 
 /** The game table on the laptop (route `/`). */
@@ -28,17 +28,7 @@ export function App() {
   const [muted, setMuted] = useMuted();
   const [dice3D] = useState(canUse3D);
 
-  useEffect(() => sound.setMuted(muted), [muted]);
-  // Browsers only allow sound after a tap, so every tap or key press unlocks it.
-  useEffect(() => {
-    const unlock = () => sound.unlock();
-    window.addEventListener('pointerdown', unlock, true);
-    window.addEventListener('keydown', unlock, true);
-    return () => {
-      window.removeEventListener('pointerdown', unlock, true);
-      window.removeEventListener('keydown', unlock, true);
-    };
-  }, []);
+  useDeviceSound(muted);
   // The server decides the screen: the lobby while a new game is set up, then the game.
   const recentPlayers = useRecentPlayers(lobby !== null);
   const newGame = () => void lobbyActions.open(preferredTheme);
