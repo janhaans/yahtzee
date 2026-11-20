@@ -4,11 +4,12 @@ import type { GameList } from '@yahtzee/server/api';
 /** Opens the game table and makes sure no game is running, then opens player setup. */
 async function openSetup(page: Page) {
   await page.goto('/');
-  const stop = page.getByRole('button', { name: 'Stop spel' });
+  const menu = page.getByRole('button', { name: 'Menu' });
   const newGame = page.getByRole('button', { name: 'Nieuw spel' });
-  await expect(stop.or(newGame)).toBeVisible();
-  if (await stop.isVisible()) {
-    await stop.click();
+  await expect(menu.or(newGame)).toBeVisible();
+  if (await menu.isVisible()) {
+    await menu.click();
+    await page.getByRole('button', { name: 'Stop spel' }).click();
     await page.getByRole('button', { name: 'Ja, stoppen' }).click();
   }
   await newGame.click();
@@ -44,7 +45,7 @@ async function playTurn(page: Page, name: string) {
   await page.getByRole('button', { name: /^Gooien!/ }).click();
   await expect(page.getByRole('button', { name: /nog 1 worp/ })).toBeVisible();
 
-  await page.locator('.score-table button.choose:enabled').first().click();
+  await page.locator('.scorecard button.choose:enabled').first().click();
   await page.getByRole('dialog').getByRole('button', { name: 'Ja!' }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
 }
@@ -98,10 +99,12 @@ test('a game can be stopped early', async ({ page }) => {
   await startGame(page, ['Noor', 'Lieke', 'Fenna']);
   await playTurn(page, 'Noor');
 
+  await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('button', { name: 'Stop spel' }).click();
   await page.getByRole('button', { name: 'Nee, verder spelen' }).click();
   await expect(page.getByRole('heading', { name: 'Lieke is aan de beurt!' })).toBeVisible();
 
+  await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('button', { name: 'Stop spel' }).click();
   await page.getByRole('button', { name: 'Ja, stoppen' }).click();
   await expect(page.getByRole('button', { name: 'Nieuw spel' })).toBeVisible();
@@ -154,6 +157,7 @@ test('the scorecard explains every box and the rules can be opened', async ({ pa
   );
   await page.getByRole('button', { name: 'Sluiten' }).click();
 
+  await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('button', { name: 'Regels' }).click();
   await expect(page.getByRole('dialog', { name: 'Zo speel je Yahtzee' })).toContainText(
     '35 bonuspunten',

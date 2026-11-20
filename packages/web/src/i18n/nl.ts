@@ -313,11 +313,14 @@ export const nl = {
   game: {
     round: (round: number, total: number) => `Ronde ${round} van ${total}`,
     turn: (name: string) => `${name} is aan de beurt!`,
+    rollOf: (n: number, max: number) => `Worp ${n} van ${max}`,
+    chooseBoxHint: 'Kies een vakje op je scorekaart',
+    menu: 'Menu',
     roll: 'Gooien!',
     rollsLeft: (n: number) => (n === 1 ? 'nog 1 worp' : `nog ${n} worpen`),
     chooseBox: 'Kies een vakje',
     rollFirst: 'Gooi eerst de dobbelstenen',
-    holdHint: 'Tik op een dobbelsteen om hem vast te houden.',
+    holdHint: 'tik op een dobbelsteen om hem vast te houden',
     die: (n: number, value: number | null, held: boolean) =>
       `Dobbelsteen ${n}${value === null ? '' : `: ${value}`}${held ? ', vastgehouden' : ''}`,
     held: 'Vast',
@@ -328,6 +331,9 @@ export const nl = {
   },
 
   scorecard: {
+    title: (name: string) => `Scorekaart ${name}`,
+    tapToChoose: 'tik om te kiezen',
+    bonusAt: (threshold: number) => `Bonus bij ${threshold}`,
     box: 'Vakje',
     upper: 'Boven',
     lower: 'Onder',

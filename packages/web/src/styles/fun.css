@@ -105,7 +105,8 @@
   }
 }
 
-/* Funny messages: a speech bubble that pops up and never blocks a tap. */
+/* Funny messages: a speech bubble that pops up and never blocks a tap. On the game screen
+   it sits on the dice table (.in-table), elsewhere at the top of the page. */
 .fun-message {
   position: fixed;
   top: 80px;
@@ -115,6 +116,10 @@
   justify-content: center;
   pointer-events: none;
   z-index: 20;
+}
+
+.fun-message.in-table {
+  position: static;
 }
 
 .bubble {

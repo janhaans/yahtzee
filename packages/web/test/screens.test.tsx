@@ -13,6 +13,7 @@ import {
 } from '@yahtzee/game-logic';
 import { EndScreen } from '../src/components/EndScreen';
 import { GameScreen } from '../src/components/GameScreen';
+import { ScoreCard } from '../src/components/ScoreCard';
 import { ScoreTable } from '../src/components/ScoreTable';
 import { SetupScreen } from '../src/components/SetupScreen';
 import { UnfinishedDialog } from '../src/components/UnfinishedDialog';
@@ -65,32 +66,52 @@ function fakeActions(): GameActions {
   };
 }
 
-describe('ScoreTable', () => {
-  it('shows a point preview for every empty box', () => {
+describe('ScoreCard', () => {
+  it('shows a point preview for every empty box and highlights the best one', () => {
     render(
-      <ScoreTable
-        players={[players[0]!]}
-        scorecards={[card({ chance: 20 })]}
-        choose={{ dice: [3, 3, 3, 5, 5], onChoose: () => {} }}
+      <ScoreCard
+        player={players[0]!}
+        card={card({ chance: 20 })}
+        dice={[3, 3, 3, 5, 5]}
+        onChoose={() => {}}
       />,
     );
-    expect(screen.getByRole('button', { name: 'Full House: 25' })).toBeEnabled();
+    expect(screen.getByRole('heading', { name: 'Scorekaart Emma' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Full House: 25' })).toHaveTextContent('+25');
+    expect(screen.getByRole('button', { name: 'Full House: 25' }).closest('li')).toHaveClass(
+      'best',
+    );
     expect(screen.getByRole('button', { name: 'Drie gelijke: 19' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Yahtzee: 0' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Yahtzee: 0' })).toHaveTextContent('0');
     expect(screen.queryByRole('button', { name: /^Kans/ })).toBeNull();
+    // Kans already holds 20; that is also the total.
+    expect(screen.getAllByText('20')).toHaveLength(2);
+    expect(screen.getByText('0 van 63')).toBeVisible();
   });
 
   it('only enables the boxes the Joker rule allows', () => {
     render(
-      <ScoreTable
-        players={[players[0]!]}
-        scorecards={[card({ yahtzee: 50 })]}
-        choose={{ dice: [6, 6, 6, 6, 6], onChoose: () => {} }}
+      <ScoreCard
+        player={players[0]!}
+        card={card({ yahtzee: 50 })}
+        dice={[6, 6, 6, 6, 6]}
+        onChoose={() => {}}
       />,
     );
     expect(screen.getByRole('button', { name: 'Zessen: 30' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Full House' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Kans' })).toBeDisabled();
+  });
+
+  it('shows the bonuses once they are earned', () => {
+    const earned = {
+      ...card({ yahtzee: 50, ones: 3, twos: 6, threes: 9, fours: 16, fives: 15, sixes: 18 }),
+      yahtzeeBonusCount: 1,
+    };
+    render(<ScoreCard player={players[0]!} card={earned} dice={null} onChoose={() => {}} />);
+    expect(screen.getByText('+35')).toBeVisible();
+    expect(screen.getByText('+100')).toBeVisible();
+    expect(screen.queryByText('tik om te kiezen')).toBeNull();
   });
 
   it('explains a box with the (i) button', async () => {
@@ -133,15 +154,30 @@ describe('GameScreen', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent('100 bonuspunten');
   });
 
-  it('shows whose turn it is and the round', () => {
+  it('shows whose turn it is, the round and which roll it is', () => {
     render(<GameScreen state={gameWith([1, 2, 3, 4, 6])} actions={fakeActions()} />);
     expect(screen.getByRole('heading', { name: /Emma is aan de beurt!/ })).toBeVisible();
     expect(screen.getByText('Ronde 1 van 13')).toBeVisible();
+    expect(screen.getByText(/^Worp 1 van 3/)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Gooien! nog 2 worpen' })).toBeEnabled();
+  });
+
+  it('opens the rules from the menu and closes the menu with Escape', async () => {
+    render(<GameScreen state={gameWith([1, 2, 3, 4, 6])} actions={fakeActions()} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('button', { name: 'Regels' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Regels' }));
+    expect(screen.getByRole('dialog', { name: 'Zo speel je Yahtzee' })).toBeVisible();
   });
 
   it('asks before stopping the game', async () => {
     const actions = fakeActions();
     render(<GameScreen state={gameWith([1, 2, 3, 4, 6])} actions={actions} />);
+    // Stopping is tucked away in the menu.
+    expect(screen.queryByRole('button', { name: 'Stop spel' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
     await userEvent.click(screen.getByRole('button', { name: 'Stop spel' }));
     expect(actions.abort).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Ja, stoppen' }));

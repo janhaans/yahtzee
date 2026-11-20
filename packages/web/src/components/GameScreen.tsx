@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import {
   MAX_ROLLS,
   ROUNDS,
@@ -13,8 +13,9 @@ import { nl } from '../i18n/nl';
 import type { ClientResult, GameActions } from '../useGame';
 import { Dice } from './Dice';
 import { Dialog } from './Dialog';
+import { MenuIcon } from './Icons';
 import { MuteButton } from './MuteButton';
-import { ScoreTable } from './ScoreTable';
+import { ScoreCard } from './ScoreCard';
 
 interface Props {
   state: GameState;
@@ -63,19 +64,27 @@ export function GameScreen({
     await run(() => actions.chooseBox(box));
   };
 
+  const status = !state.dice
+    ? nl.game.rollFirst
+    : rollsLeft > 0
+      ? `${nl.game.rollOf(state.rollsUsed, MAX_ROLLS)} · ${nl.game.holdHint}`
+      : nl.game.chooseBoxHint;
+
   return (
     <main className="screen game-screen">
       <header className="game-bar">
+        <span className="brand-name">{nl.appName}</span>
         <span className="round">{nl.game.round(state.round, ROUNDS)}</span>
         <ul className="scores" aria-label={nl.game.scores}>
           {state.players.map((p, i) => (
             <li
               key={p.id}
               className={i === state.currentPlayerIndex ? 'score-chip current' : 'score-chip'}
-              style={{ borderColor: p.colour }}
               aria-current={i === state.currentPlayerIndex ? 'true' : undefined}
             >
-              <span className="avatar">{avatarEmoji(p.avatar)}</span>
+              <span className="avatar-circle" style={{ backgroundColor: p.colour }}>
+                {avatarEmoji(p.avatar)}
+              </span>
               <span className="name">{p.name}</span>
               <span className="points">{totals(state.scorecards[i]!).grandTotal}</span>
             </li>
@@ -83,20 +92,19 @@ export function GameScreen({
         </ul>
         <span className="menu">
           <MuteButton muted={muted} onChange={onMute} />
-          <button type="button" className="button" onClick={() => setOpen({ kind: 'rules' })}>
-            {nl.game.rules}
-          </button>
-          <button type="button" className="button" onClick={() => setOpen({ kind: 'stop' })}>
-            {nl.game.stop}
-          </button>
+          <GameMenu
+            onRules={() => setOpen({ kind: 'rules' })}
+            onStop={() => setOpen({ kind: 'stop' })}
+          />
         </span>
       </header>
 
       <div className="table">
         <section className="dice-area themed-table" ref={areaRef}>
-          <h2 className="turn-banner" style={{ backgroundColor: player.colour }}>
-            {avatarEmoji(player.avatar)} {nl.game.turn(player.name)}
-          </h2>
+          <div className="turn-heading">
+            <h2 className="turn-banner">{nl.game.turn(player.name)}</h2>
+            <p className="turn-status">{status}</p>
+          </div>
           <Dice
             dice={state.dice}
             held={state.held}
@@ -120,35 +128,35 @@ export function GameScreen({
               />
             </Suspense>
           )}
+          {/* Funny messages appear here (see FunLayer). */}
+          <div id="message-slot" className="message-slot" />
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
           <button
             type="button"
             className="button big roll-button"
             disabled={rollsLeft === 0}
             onClick={() => run(actions.roll)}
           >
-            {rollsLeft > 0
-              ? `${nl.game.roll} (${nl.game.rollsLeft(rollsLeft)})`
-              : nl.game.chooseBox}
+            {rollsLeft > 0 ? (
+              <>
+                {nl.game.roll} <span className="badge">{nl.game.rollsLeft(rollsLeft)}</span>
+              </>
+            ) : (
+              nl.game.chooseBox
+            )}
           </button>
-          <p className="hint">{state.dice ? nl.game.holdHint : nl.game.rollFirst}</p>
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
         </section>
 
-        <section className="card-area">
-          <ScoreTable
-            split
-            players={[player]}
-            scorecards={[card]}
-            choose={{
-              dice: state.dice,
-              onChoose: (box, points) => setOpen({ kind: 'confirm', box, points }),
-            }}
-          />
-        </section>
+        <ScoreCard
+          player={player}
+          card={card}
+          dice={state.dice}
+          onChoose={(box, points) => setOpen({ kind: 'confirm', box, points })}
+        />
       </div>
 
       {open?.kind === 'confirm' && (
@@ -218,5 +226,59 @@ export function GameScreen({
         />
       )}
     </main>
+  );
+}
+
+/** The ☰ button with the less frequent actions: the rules and stopping the game. */
+function GameMenu({ onRules, onStop }: { onRules: () => void; onStop: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: Event) => {
+      if (
+        event instanceof KeyboardEvent
+          ? event.key === 'Escape'
+          : !ref.current?.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('keydown', close);
+    return () => {
+      window.removeEventListener('pointerdown', close);
+      window.removeEventListener('keydown', close);
+    };
+  }, [open]);
+
+  const choose = (action: () => void) => () => {
+    setOpen(false);
+    action();
+  };
+
+  return (
+    <span className="game-menu" ref={ref}>
+      <button
+        type="button"
+        className="button round"
+        aria-label={nl.game.menu}
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <MenuIcon />
+      </button>
+      {open && (
+        <span className="menu-list card">
+          <button type="button" className="button soft" onClick={choose(onRules)}>
+            {nl.game.rules}
+          </button>
+          <button type="button" className="button soft" onClick={choose(onStop)}>
+            {nl.game.stop}
+          </button>
+        </span>
+      )}
+    </span>
   );
 }

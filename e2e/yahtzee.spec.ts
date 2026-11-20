@@ -22,7 +22,7 @@ test('a Yahtzee gets a giant celebration that a tap can end', async ({ page }) =
   await expect(party).toBeHidden();
 
   // Scoring the Yahtzee gives 50 points and a cheerful message.
-  await page.locator('.score-table button.choose', { hasText: '50' }).click();
+  await page.locator('.scorecard button.choose', { hasText: '50' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Ja!' }).click();
   await expect(page.locator('.fun-message .bubble')).toBeVisible();
   await expect(page.locator('.score-chip').first()).toContainText('50');

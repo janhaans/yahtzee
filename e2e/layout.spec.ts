@@ -13,11 +13,12 @@ const MIN_FONT = 16;
 /** Starts a 4-player game (the widest top bar) with long names, rolls and holds one die. */
 async function startBusyGame(page: Page) {
   await page.goto('/');
-  const stop = page.getByRole('button', { name: 'Stop spel' });
+  const menu = page.getByRole('button', { name: 'Menu' });
   const newGame = page.getByRole('button', { name: 'Nieuw spel' });
-  await expect(stop.or(newGame)).toBeVisible();
-  if (await stop.isVisible()) {
-    await stop.click();
+  await expect(menu.or(newGame)).toBeVisible();
+  if (await menu.isVisible()) {
+    await menu.click();
+    await page.getByRole('button', { name: 'Stop spel' }).click();
     await page.getByRole('button', { name: 'Ja, stoppen' }).click();
   }
   await newGame.click();

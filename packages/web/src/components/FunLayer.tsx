@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { GameState } from '@yahtzee/game-logic';
 import type { ThemeId } from '@yahtzee/server/looks';
 import { avatarEmoji } from '../avatars';
@@ -67,17 +68,22 @@ export function FunLayer({ state, theme }: Props) {
   }, [message]);
 
   const player = banner && state?.players[banner.seat];
+  const slot = document.getElementById('message-slot');
+  const messageBox = (
+    <div className={slot ? 'fun-message in-table' : 'fun-message'} role="status" aria-live="polite">
+      {message && (
+        <p key={message.id} className="bubble">
+          {message.text}
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <>
       {celebrating && <YahtzeeCelebration theme={theme} onDone={endCelebration} />}
-      <div className="fun-message" role="status" aria-live="polite">
-        {message && (
-          <p key={message.id} className="bubble">
-            {message.text}
-          </p>
-        )}
-      </div>
+      {/* On the game screen the message sits on the dice table; elsewhere at the top. */}
+      {slot ? createPortal(messageBox, slot) : messageBox}
       {player && (
         <div key={banner.id} className="turn-overlay" onClick={() => setBanner(null)}>
           <div className="turn-card">

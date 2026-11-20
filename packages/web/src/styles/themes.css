@@ -59,8 +59,10 @@
 }
 
 :root[data-theme='snoep'] .themed-table {
+  /* Two sparse patches of sprinkles, far apart, so only a few show. */
   background:
-    var(--sprinkles) 0 0 / 360px 300px repeat,
+    var(--sprinkles) left -40px top -30px / 360px 300px no-repeat,
+    var(--sprinkles) right -60px bottom -40px / 360px 300px no-repeat,
     var(--accent-soft);
 }
 
