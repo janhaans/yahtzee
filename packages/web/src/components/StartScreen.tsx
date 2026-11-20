@@ -1,6 +1,5 @@
 import { THEMES as THEME_IDS, type ThemeId } from '@yahtzee/server/looks';
 import { nl } from '../i18n/nl';
-import { THEMES } from '../themes';
 import { MuteButton } from './MuteButton';
 
 interface Props {
@@ -35,7 +34,7 @@ export function StartScreen({
             onClick={() => onTheme(id)}
           >
             <span className="theme-emoji" aria-hidden="true">
-              {THEMES[id].emoji}
+              {id === 'voetbal' ? '⚽' : '🍭'}
             </span>
             <span className="theme-name">{nl.themes[id].name}</span>
           </button>

@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/nunito": "^5.3.0",
     "@yahtzee/game-logic": "*",
     "@yahtzee/server": "*",
     "cannon-es": "^0.20.0",

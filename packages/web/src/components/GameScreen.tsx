@@ -93,7 +93,7 @@ export function GameScreen({
       </header>
 
       <div className="table">
-        <section className="dice-area" ref={areaRef}>
+        <section className="dice-area themed-table" ref={areaRef}>
           <h2 className="turn-banner" style={{ backgroundColor: player.colour }}>
             {avatarEmoji(player.avatar)} {nl.game.turn(player.name)}
           </h2>

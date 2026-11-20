@@ -1,0 +1,166 @@
+/* Setup */
+.setup-screen form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.count-picker {
+  border: none;
+  padding: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.count-picker legend {
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.name-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.name-list label {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.name-list label span {
+  min-width: 90px;
+  font-weight: 700;
+}
+
+.name-list input {
+  flex: 1;
+  max-width: 320px;
+  min-height: 48px;
+  padding: 0 12px;
+  font: inherit;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.recent-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.button.chip {
+  min-height: 48px;
+  padding: 6px 16px;
+  border-radius: 999px;
+}
+
+/* Setup: avatar and colour per player */
+.player-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 3px solid;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.player-row label {
+  flex: 1 1 260px;
+}
+
+.avatar-button {
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  font-size: 2rem;
+  cursor: pointer;
+}
+
+.colour-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.swatch {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--line);
+  cursor: pointer;
+}
+
+/* The chosen colour gets a check mark, so colour is never the only clue. */
+.swatch[aria-pressed='true'] {
+  box-shadow: 0 0 0 3px var(--text);
+}
+
+.swatch[aria-pressed='true']::after {
+  content: '✓';
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.swatch:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.swatch:disabled::after {
+  content: '✕';
+  color: #fff;
+  font-weight: 800;
+}
+
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.avatar-choice {
+  min-height: 64px;
+  font-size: 2.2rem;
+  border: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.avatar-choice[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.name-list.shuffling .player-row {
+  animation: shuffle-wiggle 0.2s ease-in-out infinite alternate;
+}
+
+.name-list.shuffling .player-row:nth-child(even) {
+  animation-direction: alternate-reverse;
+}
+
+@keyframes shuffle-wiggle {
+  from {
+    transform: translateX(-10px) rotate(-1deg);
+  }
+  to {
+    transform: translateX(10px) rotate(1deg);
+  }
+}

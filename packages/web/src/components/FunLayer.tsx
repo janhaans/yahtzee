@@ -80,8 +80,12 @@ export function FunLayer({ state, theme }: Props) {
       </div>
       {player && (
         <div key={banner.id} className="turn-overlay" onClick={() => setBanner(null)}>
-          <div className="turn-card" style={{ backgroundColor: player.colour }}>
-            <span className="turn-avatar" aria-hidden="true">
+          <div className="turn-card">
+            <span
+              className="turn-avatar avatar-circle"
+              style={{ backgroundColor: player.colour }}
+              aria-hidden="true"
+            >
               {avatarEmoji(player.avatar)}
             </span>
             <span className="turn-name">{nl.game.turn(player.name)}</span>

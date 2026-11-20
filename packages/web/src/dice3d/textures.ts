@@ -16,6 +16,7 @@ const PIPS: Record<DieValue, readonly number[]> = {
 
 function drawPattern(ctx: CanvasRenderingContext2D, look: DiceLook): void {
   ctx.fillStyle = look.patternColour;
+  if (look.pattern === 'none') return;
   if (look.pattern === 'football') {
     // Patches in the corners, like the panels of a football.
     for (const [x, y] of [

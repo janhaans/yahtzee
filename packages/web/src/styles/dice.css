@@ -1,0 +1,178 @@
+/* The dice: white rounded dice; held dice get an accent border and "Vast" underneath. */
+.dice {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+  padding-bottom: 26px;
+}
+
+/* A die is a button: the CSS cube or the 3D die is drawn inside or over it. */
+.die {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  padding: 0;
+  border: none;
+  border-radius: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.die:disabled {
+  cursor: default;
+}
+
+.die-face {
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  width: 100%;
+  height: 100%;
+  place-items: center;
+}
+
+.pip {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--text);
+}
+
+.pip.empty {
+  background: transparent;
+}
+
+.held-label {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+/* CSS 3D dice: five cubes that tumble onto the rolled values. */
+.cube-dice .die {
+  perspective: 500px;
+}
+
+.cube {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.cube-dice.rolling .cube {
+  transition: transform 0.8s cubic-bezier(0.2, 0.85, 0.35, 1.05);
+}
+
+.cube-face {
+  position: absolute;
+  inset: 0;
+  padding: 12px;
+  border: 2px solid var(--die-edge);
+  border-radius: var(--die-rounding);
+  background: var(--die-face);
+  box-shadow: 0 6px 14px rgb(31 36 48 / 0.1);
+  backface-visibility: hidden;
+}
+
+.cube-face .pip {
+  background: var(--die-pip);
+}
+
+.cube-face .pip.empty {
+  background: transparent;
+}
+
+.face-1 {
+  transform: translateZ(46px);
+}
+
+.face-2 {
+  transform: rotateY(90deg) translateZ(46px);
+}
+
+.face-3 {
+  transform: rotateX(90deg) translateZ(46px);
+}
+
+.face-4 {
+  transform: rotateX(-90deg) translateZ(46px);
+}
+
+.face-5 {
+  transform: rotateY(-90deg) translateZ(46px);
+}
+
+.face-6 {
+  transform: rotateY(180deg) translateZ(46px);
+}
+
+/* Dice skins for later: football patches and sugar crystals. */
+.cube-dice[data-pattern='football'] .cube-face {
+  background:
+    radial-gradient(circle at 0 0, var(--die-pattern) 0 16px, transparent 17px),
+    radial-gradient(circle at 100% 0, var(--die-pattern) 0 16px, transparent 17px),
+    radial-gradient(circle at 0 100%, var(--die-pattern) 0 16px, transparent 17px),
+    radial-gradient(circle at 100% 100%, var(--die-pattern) 0 16px, transparent 17px),
+    var(--die-face);
+}
+
+.cube-dice[data-pattern='sugar'] .cube-face {
+  background:
+    radial-gradient(circle at 20% 30%, var(--die-pattern) 0 2px, transparent 3px) 0 0 / 22px 22px,
+    radial-gradient(circle at 70% 60%, var(--die-pattern) 0 1.5px, transparent 2.5px) 0 0 / 17px
+      17px,
+    var(--die-face);
+}
+
+/* Held dice stay put, wiggle and get an accent border. */
+.cube-dice .die.held {
+  animation: held-wiggle 1.2s ease-in-out infinite;
+}
+
+.cube-dice .die.held .cube-face {
+  border: 5px solid var(--accent);
+  padding: 9px;
+}
+
+.button-dice .die.held {
+  box-shadow: 0 0 0 5px var(--accent);
+}
+
+@keyframes held-wiggle {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  70% {
+    transform: rotate(-6deg);
+  }
+  80% {
+    transform: rotate(6deg);
+  }
+  90% {
+    transform: rotate(-3deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cube-dice .die.held {
+    animation: none;
+  }
+}
+
+/* 3D dice: the canvas lies over the dice table; taps go through to the die buttons below. */
+.dice-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}

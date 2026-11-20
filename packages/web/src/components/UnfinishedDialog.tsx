@@ -30,8 +30,11 @@ export function UnfinishedDialog({ game, onContinue, onStop }: Props) {
     >
       <ul className="unfinished-players">
         {game.players.map((player) => (
-          <li key={player.id} style={{ borderColor: player.colour }}>
-            {avatarEmoji(player.avatar)} {player.name}
+          <li key={player.id}>
+            <span className="avatar-circle" style={{ backgroundColor: player.colour }}>
+              {avatarEmoji(player.avatar)}
+            </span>
+            {player.name}
           </li>
         ))}
       </ul>

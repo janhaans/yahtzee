@@ -1,0 +1,70 @@
+/*
+ * The two themes. The page looks the same in both; a theme only brings its accent colour
+ * and a few subtle details: chalk lines on the dice table, or a few sprinkles.
+ */
+
+:root[data-theme='voetbal'] {
+  --accent: #187a41;
+  --accent-soft: #e8f4ec;
+}
+
+:root[data-theme='snoep'] {
+  --accent: #c2255c;
+  --accent-soft: #fce8ef;
+}
+
+/* A few sprinkles: a small inline SVG, used on the dice table and in a page corner. */
+:root {
+  --sprinkles: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='300'%3E%3Cg stroke-linecap='round' stroke-width='7'%3E%3Cpath d='M40 40l14 8' stroke='%23C2255C'/%3E%3Cpath d='M200 30l8 12' stroke='%234C8DF6'/%3E%3Cpath d='M300 70l-12 8' stroke='%23F2A93B'/%3E%3Cpath d='M70 210l12-6' stroke='%23F2A93B'/%3E%3Cpath d='M260 230l10 10' stroke='%23C2255C'/%3E%3Cpath d='M150 270l14-4' stroke='%239A6CF0'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+:root[data-theme='snoep'] body {
+  background:
+    var(--sprinkles) right -60px top -90px / 360px 300px no-repeat,
+    var(--bg);
+}
+
+/* Chalk lines of a pitch: halfway line, centre circle and both penalty areas. */
+:root[data-theme='voetbal'] .themed-table {
+  background:
+    linear-gradient(#fff, #fff) center / 3px 100% no-repeat,
+    radial-gradient(
+        circle at center,
+        transparent 0 calc(var(--circle) - 3px),
+        #fff calc(var(--circle) - 3px) var(--circle),
+        transparent var(--circle)
+      )
+      center / 100% 100% no-repeat,
+    var(--accent-soft);
+  --circle: 120px;
+}
+
+:root[data-theme='voetbal'] .themed-table::before,
+:root[data-theme='voetbal'] .themed-table::after {
+  content: '';
+  position: absolute;
+  top: 34%;
+  bottom: 34%;
+  width: 9%;
+  border: 3px solid #fff;
+  pointer-events: none;
+}
+
+:root[data-theme='voetbal'] .themed-table::before {
+  left: -3px;
+}
+
+:root[data-theme='voetbal'] .themed-table::after {
+  right: -3px;
+}
+
+:root[data-theme='snoep'] .themed-table {
+  background:
+    var(--sprinkles) 0 0 / 360px 300px repeat,
+    var(--accent-soft);
+}
+
+.themed-table {
+  position: relative;
+  overflow: hidden;
+}

@@ -1,0 +1,128 @@
+/* End */
+.winner-headline {
+  font-size: 2rem;
+  color: var(--text);
+}
+
+.ranking {
+  padding-left: 1.5em;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 1.2rem;
+}
+
+.ranking li {
+  padding: 8px 14px;
+  border-left: 6px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+}
+
+.ranking .name {
+  margin: 0 12px 0 8px;
+  font-weight: 700;
+}
+
+/* Winner party: a podium with a block per player, 1st in the middle and highest. */
+.ranking.podium {
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.ranking.podium li {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 8px 0;
+  border: none;
+  border-radius: 16px 16px 0 0;
+  background: var(--surface);
+  text-align: center;
+}
+
+.podium .avatar {
+  font-size: 3rem;
+}
+
+.podium .winner .avatar {
+  font-size: 4.2rem;
+  animation: winner-dance 0.9s ease-in-out infinite;
+}
+
+.podium .name {
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podium .points {
+  font-weight: 800;
+}
+
+.podium .title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.podium .step {
+  align-self: stretch;
+  margin: 8px -8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 2rem;
+  text-shadow: 0 2px 3px rgb(0 0 0 / 0.35);
+  border-radius: 8px 8px 0 0;
+}
+
+.podium .step-1 {
+  height: 150px;
+}
+
+.podium .step-2 {
+  height: 110px;
+}
+
+.podium .step-3 {
+  height: 80px;
+}
+
+.podium .step-4 {
+  height: 56px;
+}
+
+.podium .trophy {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+@keyframes winner-dance {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  25% {
+    transform: translateY(-14px) rotate(-12deg);
+  }
+  50% {
+    transform: translateY(0) rotate(0) scale(1.1);
+  }
+  75% {
+    transform: translateY(-14px) rotate(12deg);
+  }
+}
