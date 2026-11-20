@@ -81,14 +81,15 @@ export const nl = {
 
   start: {
     newGame: 'Nieuw spel',
+    tagline: 'Kies een thema en gooi de dobbelstenen!',
     chooseTheme: 'Kies je thema',
     connecting: 'Verbinden met de spelcomputer...',
   },
 
   themes: {
-    voetbal: { name: 'Voetbalstadion', tagline: 'Aftrap! Wie scoort de meeste punten?' },
-    snoep: { name: 'Snoepwinkel', tagline: 'Gooien, snoepen en nog eens gooien!' },
-  } satisfies Record<ThemeId, { name: string; tagline: string }>,
+    voetbal: { name: 'Voetbalstadion', description: 'Groen veld, juichend publiek' },
+    snoep: { name: 'Snoepwinkel', description: 'Zoet, vrolijk en kleurig' },
+  } satisfies Record<ThemeId, { name: string; description: string }>,
 
   setup: {
     title: 'Wie doen er mee?',
@@ -294,6 +295,9 @@ export const nl = {
   },
 
   sound: {
+    label: 'Geluid',
+    on: 'Geluid aan',
+    off: 'Geluid uit',
     turnOn: 'Geluid aan',
     turnOff: 'Geluid uit',
   },

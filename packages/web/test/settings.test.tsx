@@ -56,4 +56,16 @@ describe('StartScreen', () => {
     await userEvent.click(screen.getByRole('button', { name: /Snoepwinkel/ }));
     expect(onTheme).toHaveBeenCalledWith('snoep');
   });
+
+  it('says whether the sound is on and switches it', async () => {
+    const onMute = vi.fn();
+    render(
+      <StartScreen theme="snoep" onTheme={() => {}} muted onMute={onMute} onNewGame={() => {}} />,
+    );
+    const sound = screen.getByRole('switch', { name: 'Geluid' });
+    expect(sound).toHaveAttribute('aria-checked', 'false');
+    expect(sound).toHaveTextContent('Geluid uit');
+    await userEvent.click(sound);
+    expect(onMute).toHaveBeenCalledWith(false);
+  });
 });

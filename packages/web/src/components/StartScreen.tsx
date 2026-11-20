@@ -1,5 +1,7 @@
 import { THEMES as THEME_IDS, type ThemeId } from '@yahtzee/server/looks';
 import { nl } from '../i18n/nl';
+import { DieFace } from './Dice';
+import { CheckIcon, Logo } from './Icons';
 import { MuteButton } from './MuteButton';
 
 interface Props {
@@ -10,6 +12,9 @@ interface Props {
   onNewGame: () => void;
 }
 
+/** The die on each theme card. */
+const CARD_DIE = { voetbal: 5, snoep: 3 } as const;
+
 export function StartScreen({
   theme,
   onTheme,
@@ -19,11 +24,19 @@ export function StartScreen({
 }: Props) {
   return (
     <main className="screen start-screen">
+      <header className="start-bar">
+        <span className="brand">
+          <Logo />
+          {nl.appName}
+        </span>
+        <MuteButton muted={muted} onChange={onMute} variant="labelled" />
+      </header>
+
       <h1 className="logo">{nl.appName}</h1>
-      <p className="tagline">{nl.themes[theme].tagline}</p>
+      <p className="tagline">{nl.start.tagline}</p>
 
       <fieldset className="theme-picker">
-        <legend>{nl.start.chooseTheme}</legend>
+        <legend className="visually-hidden">{nl.start.chooseTheme}</legend>
         {THEME_IDS.map((id) => (
           <button
             key={id}
@@ -33,20 +46,25 @@ export function StartScreen({
             aria-pressed={id === theme}
             onClick={() => onTheme(id)}
           >
-            <span className="theme-emoji" aria-hidden="true">
-              {id === 'voetbal' ? '⚽' : '🍭'}
+            <span className="theme-art" aria-hidden="true">
+              <span className="mini-die">
+                <DieFace value={CARD_DIE[id]} />
+              </span>
             </span>
-            <span className="theme-name">{nl.themes[id].name}</span>
+            <span className="theme-text">
+              <span className="theme-name">{nl.themes[id].name}</span>
+              <span className="theme-description">{nl.themes[id].description}</span>
+            </span>
+            <span className="theme-check" aria-hidden="true">
+              {id === theme && <CheckIcon size={20} />}
+            </span>
           </button>
         ))}
       </fieldset>
 
-      <div className="row">
-        <button type="button" className="button big" onClick={onNewGame}>
-          {nl.start.newGame}
-        </button>
-        <MuteButton muted={muted} onChange={onMute} />
-      </div>
+      <button type="button" className="button big" onClick={onNewGame}>
+        {nl.start.newGame}
+      </button>
     </main>
   );
 }
