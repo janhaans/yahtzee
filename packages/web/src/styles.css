@@ -1029,3 +1029,36 @@ h2 {
     animation: none;
   }
 }
+
+/* 3D dice: the canvas lies over the dice table; taps go through to the die buttons below. */
+.dice-area {
+  position: relative;
+}
+
+.dice-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.button-dice .die {
+  width: 92px;
+  height: 92px;
+  border: none;
+  border-radius: 18px;
+  background: transparent;
+}
+
+.button-dice .die.held {
+  transform: none;
+  box-shadow:
+    0 0 0 4px var(--primary),
+    0 0 22px 8px var(--accent);
+}
+
+.button-dice .held-label {
+  z-index: 3;
+}

@@ -70,4 +70,22 @@ test.describe('with animations', () => {
     await banner.click();
     await expect(banner).toBeHidden();
   });
+
+  test('the laptop throws 3D dice that land on the rolled values; a tap skips', async ({
+    page,
+  }) => {
+    await startGame(page, 'Snoepwinkel', ['Emma', 'Sara']);
+    await page.locator('.turn-overlay').click();
+    await expect(page.locator('.dice-canvas')).toBeVisible();
+    await expect(page.locator('.button-dice')).toBeVisible();
+
+    await page.getByRole('button', { name: /^Gooien!/ }).click();
+    // The first tap during the throw only skips it: no die is held.
+    await page.getByRole('button', { name: /^Dobbelsteen 1/ }).click();
+    await expect(page.getByText('Vast', { exact: true })).toBeHidden();
+    await page.getByRole('button', { name: /^Dobbelsteen 1/ }).click();
+    await expect(
+      page.getByRole('button', { name: /^Dobbelsteen 1: \d, vastgehouden/ }),
+    ).toBeVisible();
+  });
 });

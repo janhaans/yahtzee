@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import type { Dice as DiceValues, DieValue, Held } from '@yahtzee/game-logic';
 import type { ThemeId } from '@yahtzee/server/looks';
 import { nl } from '../i18n/nl';
 import { reducedMotion } from '../motion';
+import { sound } from '../sound/engine';
 import { THEMES } from '../themes';
 
 /** Pip positions on a 3 x 3 grid (1 = top left, 9 = bottom right). */
@@ -59,26 +60,46 @@ interface Props {
   theme: ThemeId;
   /** Changes with every roll; a new value makes the dice that are not held tumble. */
   rollId: string;
+  /**
+   * 'cubes' draws CSS 3D cubes. 'buttons' only keeps the (invisible) die buttons, for when
+   * the 3D dice are drawn on top.
+   */
+  variant?: 'cubes' | 'buttons';
+  /** The row of die buttons, for the 3D dice to land under. */
+  rowRef?: RefObject<HTMLDivElement | null>;
 }
 
 /**
  * Five CSS 3D cubes that tumble and land on the values the server rolled. Light enough for
  * every phone. Tapping the table skips the tumbling.
  */
-export function Dice({ dice, held, canHold, onToggle, theme, rollId }: Props) {
+export function Dice({
+  dice,
+  held,
+  canHold,
+  onToggle,
+  theme,
+  rollId,
+  variant = 'cubes',
+  rowRef,
+}: Props) {
   const [spins, setSpins] = useState<readonly (readonly [number, number])[]>(() =>
     held.map(() => [0, 0] as const),
   );
   const [rolling, setRolling] = useState(false);
   const lastRoll = useRef(rollId);
-  const latest = useRef({ dice, held });
-  latest.current = { dice, held };
+  const latest = useRef({ dice, held, theme, variant });
+  latest.current = { dice, held, theme, variant };
 
   // A new roll: the dice that were not held get extra turns, so they tumble to their value.
   useEffect(() => {
     if (rollId === lastRoll.current) return;
     lastRoll.current = rollId;
-    if (latest.current.dice === null || reducedMotion()) return;
+    const now = latest.current;
+    // The 3D dice make their own sound with every bounce.
+    if (now.dice === null || now.variant === 'buttons') return;
+    sound.play('roll', now.theme);
+    if (reducedMotion()) return;
     setSpins((current) => addSpins(current, latest.current.held));
     setRolling(true);
   }, [rollId]);
@@ -100,7 +121,8 @@ export function Dice({ dice, held, canHold, onToggle, theme, rollId }: Props) {
 
   return (
     <div
-      className={`dice cube-dice${rolling ? ' rolling' : ''}`}
+      ref={rowRef}
+      className={`dice ${variant === 'cubes' ? 'cube-dice' : 'button-dice'}${rolling ? ' rolling' : ''}`}
       data-pattern={look.pattern}
       style={style}
       onClickCapture={(event) => {
@@ -128,13 +150,15 @@ export function Dice({ dice, held, canHold, onToggle, theme, rollId }: Props) {
             disabled={!canHold}
             onClick={() => onToggle(i)}
           >
-            <span className="cube" style={cubeStyle} aria-hidden="true">
-              {VALUES.map((face) => (
-                <span key={face} className={`cube-face face-${face}`}>
-                  <DieFace value={dice ? face : null} />
-                </span>
-              ))}
-            </span>
+            {variant === 'cubes' && (
+              <span className="cube" style={cubeStyle} aria-hidden="true">
+                {VALUES.map((face) => (
+                  <span key={face} className={`cube-face face-${face}`}>
+                    <DieFace value={dice ? face : null} />
+                  </span>
+                ))}
+              </span>
+            )}
             {isHeld && <span className="held-label">{nl.game.held}</span>}
           </button>
         );

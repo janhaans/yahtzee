@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Suspense, lazy, useCallback, useRef, useState } from 'react';
 import {
   MAX_ROLLS,
   ROUNDS,
@@ -22,7 +22,12 @@ interface Props {
   theme?: ThemeId;
   muted?: boolean;
   onMute?: (muted: boolean) => void;
+  /** Throw real 3D dice (laptop with WebGL); otherwise CSS cubes. */
+  dice3D?: boolean;
 }
+
+// three.js and the physics engine are only downloaded when the 3D dice are used.
+const DiceScene = lazy(() => import('../dice3d/DiceScene'));
 
 type Open = { kind: 'confirm'; box: BoxId; points: number } | { kind: 'rules' } | { kind: 'stop' };
 
@@ -32,13 +37,19 @@ export function GameScreen({
   theme = DEFAULT_THEME,
   muted = false,
   onMute = () => {},
+  dice3D = false,
 }: Props) {
   const [open, setOpen] = useState<Open | null>(null);
+  const areaRef = useRef<HTMLElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [scene3D, setScene3D] = useState(false);
+  const onSceneReady = useCallback(() => setScene3D(true), []);
   const [error, setError] = useState<string | null>(null);
 
   const player = state.players[state.currentPlayerIndex]!;
   const card = state.scorecards[state.currentPlayerIndex]!;
   const rollsLeft = MAX_ROLLS - state.rollsUsed;
+  const rollId = `${state.round}-${state.currentPlayerIndex}-${state.rollsUsed}`;
   const close = () => setOpen(null);
 
   const run = async (action: () => Promise<ClientResult>) => {
@@ -82,7 +93,7 @@ export function GameScreen({
       </header>
 
       <div className="table">
-        <section className="dice-area">
+        <section className="dice-area" ref={areaRef}>
           <h2 className="turn-banner" style={{ backgroundColor: player.colour }}>
             {avatarEmoji(player.avatar)} {nl.game.turn(player.name)}
           </h2>
@@ -92,8 +103,23 @@ export function GameScreen({
             canHold={state.dice !== null && rollsLeft > 0}
             onToggle={(index) => run(() => actions.toggleHold(index))}
             theme={theme}
-            rollId={`${state.round}-${state.currentPlayerIndex}-${state.rollsUsed}`}
+            rollId={rollId}
+            variant={scene3D ? 'buttons' : 'cubes'}
+            rowRef={rowRef}
           />
+          {dice3D && (
+            <Suspense fallback={null}>
+              <DiceScene
+                dice={state.dice}
+                held={state.held}
+                rollId={rollId}
+                theme={theme}
+                area={areaRef}
+                slots={rowRef}
+                onReady={onSceneReady}
+              />
+            </Suspense>
+          )}
           <button
             type="button"
             className="button big roll-button"

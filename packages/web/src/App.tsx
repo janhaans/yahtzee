@@ -8,6 +8,7 @@ import { StartScreen } from './components/StartScreen';
 import { UnfinishedDialog } from './components/UnfinishedDialog';
 import { nl } from './i18n/nl';
 import { useMuted, useThemePreference } from './settings';
+import { canUse3D } from './dice3d/support';
 import { sound } from './sound/engine';
 import { useGame } from './useGame';
 
@@ -16,6 +17,7 @@ export function App() {
   const { state, theme: gameTheme, connected, unfinished, saveFailed, actions } = useGame();
   const [preferredTheme, setPreferredTheme] = useThemePreference();
   const [muted, setMuted] = useMuted();
+  const [dice3D] = useState(canUse3D);
 
   useEffect(() => sound.setMuted(muted), [muted]);
   // Browsers only allow sound after a tap, so every tap or key press unlocks it.
@@ -54,7 +56,14 @@ export function App() {
     );
   } else if (state?.status === 'in_progress') {
     screen = (
-      <GameScreen state={state} actions={actions} theme={theme} muted={muted} onMute={setMuted} />
+      <GameScreen
+        state={state}
+        actions={actions}
+        theme={theme}
+        muted={muted}
+        onMute={setMuted}
+        dice3D={dice3D}
+      />
     );
   } else if (state?.status === 'finished' && view === 'start') {
     screen = (

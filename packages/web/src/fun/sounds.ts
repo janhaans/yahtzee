@@ -14,7 +14,8 @@ export function soundsFor(event: GameEvent): SoundName[] {
     case 'held':
       return ['hold'];
     case 'rolled':
-      return event.yahtzee ? ['roll', 'yahtzee'] : ['roll'];
+      // The dice make their own rolling sound, in time with how they move.
+      return event.yahtzee ? ['yahtzee'] : [];
     case 'scored':
       if (event.upperBonus || event.yahtzeeBonus) return ['bonus'];
       return event.points === 0 ? ['zero'] : ['score'];

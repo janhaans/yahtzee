@@ -21,8 +21,8 @@ describe('soundsFor', () => {
     expect(soundsFor({ kind: 'newGame' })).toEqual([]);
     expect(soundsFor({ kind: 'turn', seat: 1 })).toEqual(['turn']);
     expect(soundsFor({ kind: 'held', seat: 0, index: 2, held: true })).toEqual(['hold']);
-    expect(soundsFor(rolled)).toEqual(['roll']);
-    expect(soundsFor({ ...rolled, yahtzee: true })).toEqual(['roll', 'yahtzee']);
+    expect(soundsFor(rolled)).toEqual([]);
+    expect(soundsFor({ ...rolled, yahtzee: true })).toEqual(['yahtzee']);
     expect(soundsFor(scored(20))).toEqual(['score']);
     expect(soundsFor(scored(0))).toEqual(['zero']);
     expect(soundsFor(scored(12, { upperBonus: true }))).toEqual(['bonus']);
