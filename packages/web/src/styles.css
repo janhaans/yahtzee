@@ -314,25 +314,20 @@ h2 {
   padding-bottom: 8px;
 }
 
+/* A die is a button: the CSS cube or the 3D die is drawn inside or over it. */
 .die {
   position: relative;
   width: 92px;
   height: 92px;
-  padding: 12px;
-  border: 3px solid var(--text);
-  border-radius: 16px;
-  background: #fff;
+  padding: 0;
+  border: none;
+  border-radius: 18px;
+  background: transparent;
   cursor: pointer;
 }
 
 .die:disabled {
   cursor: default;
-}
-
-.die.held {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--accent);
-  transform: translateY(-4px);
 }
 
 .die-face {
@@ -1122,11 +1117,6 @@ h2 {
 
 /* CSS 3D dice: five cubes that tumble onto the rolled values. */
 .cube-dice .die {
-  width: 92px;
-  height: 92px;
-  padding: 0;
-  border: none;
-  background: transparent;
   perspective: 500px;
 }
 
@@ -1203,8 +1193,6 @@ h2 {
 
 /* Held dice stay put, wiggle and glow. */
 .cube-dice .die.held {
-  transform: none;
-  box-shadow: none;
   animation: held-wiggle 1.2s ease-in-out infinite;
 }
 
@@ -1252,16 +1240,7 @@ h2 {
   z-index: 2;
 }
 
-.button-dice .die {
-  width: 92px;
-  height: 92px;
-  border: none;
-  border-radius: 18px;
-  background: transparent;
-}
-
 .button-dice .die.held {
-  transform: none;
   box-shadow:
     0 0 0 4px var(--primary),
     0 0 22px 8px var(--accent);
