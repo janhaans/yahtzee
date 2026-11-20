@@ -144,6 +144,9 @@ export const nl = {
     done: 'Klaar',
     leave: 'Toch niet meedoen',
     gameRunning: 'Er wordt al gespeeld! Bij het volgende spel kun je meedoen.',
+    yourTurn: (name: string) => `Jouw beurt, ${name}!`,
+    waitTurn: 'Even wachten... kijk maar mee!',
+    nextGame: 'Nog een keer spelen? Dat start je op de laptop.',
   },
 
   avatars: {
@@ -346,6 +349,8 @@ export const nl = {
   game: {
     round: (round: number, total: number) => `Ronde ${round} van ${total}`,
     turn: (name: string) => `${name} is aan de beurt`,
+    onPhone: (name: string) => `${name} speelt op de telefoon 📱`,
+    phonePlayer: 'speelt op de telefoon',
     rollOf: (n: number, max: number) => `Worp ${n} van ${max}`,
     chooseBoxHint: 'Kies een vakje op je scorekaart',
     menu: 'Menu',

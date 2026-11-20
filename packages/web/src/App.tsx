@@ -19,6 +19,7 @@ export function App() {
     theme: gameTheme,
     connected,
     lobby,
+    seats,
     unfinished,
     saveFailed,
     actions,
@@ -66,6 +67,7 @@ export function App() {
         muted={muted}
         onMute={setMuted}
         dice3D={dice3D}
+        seats={seats}
       />
     );
   } else if (state?.status === 'finished') {

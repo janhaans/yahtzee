@@ -11,6 +11,7 @@ import { DEFAULT_THEME, type ThemeId } from '@yahtzee/server/looks';
 import { avatarEmoji } from '../avatars';
 import { nl } from '../i18n/nl';
 import { reducedMotion } from '../motion';
+import type { SeatInfo } from '@yahtzee/server/protocol';
 import type { ClientResult, GameActions } from '../useGame';
 import { Dice } from './Dice';
 import { Dialog } from './Dialog';
@@ -27,6 +28,10 @@ interface Props {
   onMute?: (muted: boolean) => void;
   /** Throw real 3D dice (laptop with WebGL); otherwise CSS cubes. */
   dice3D?: boolean;
+  /** Where every player plays, in playing order. */
+  seats?: readonly SeatInfo[];
+  /** On a phone: the player of this phone. It only plays its own turns. */
+  me?: string;
 }
 
 // three.js and the physics engine are only downloaded when the 3D dice are used.
@@ -45,6 +50,8 @@ export function GameScreen({
   muted = false,
   onMute = () => {},
   dice3D = false,
+  seats = [],
+  me,
 }: Props) {
   const [open, setOpen] = useState<Open | null>(null);
   const areaRef = useRef<HTMLElement>(null);
@@ -54,7 +61,14 @@ export function GameScreen({
   const [error, setError] = useState<string | null>(null);
 
   const player = state.players[state.currentPlayerIndex]!;
-  const card = state.scorecards[state.currentPlayerIndex]!;
+  const seat = seats[state.currentPlayerIndex];
+  const onPhone = me !== undefined;
+  // The laptop plays laptop turns (and a turn it took over); a phone only its own turns.
+  const canPlay = onPhone ? player.id === me : seat?.controller !== 'phone' || seat.takenOver;
+  // While waiting, a phone shows its own scorecard; otherwise the card of whoever plays.
+  const cardIndex = onPhone && !canPlay ? state.players.findIndex((p) => p.id === me) : -1;
+  const cardPlayer = state.players[cardIndex] ?? player;
+  const card = state.scorecards[cardIndex] ?? state.scorecards[state.currentPlayerIndex]!;
   const rollsLeft = MAX_ROLLS - state.rollsUsed;
   const rollId = `${state.round}-${state.currentPlayerIndex}-${state.rollsUsed}`;
   const turnId = `${state.round}-${state.currentPlayerIndex}`;
@@ -72,11 +86,17 @@ export function GameScreen({
     await run(() => actions.chooseBox(box));
   };
 
-  const status = !state.dice
-    ? nl.game.rollFirst
-    : rollsLeft > 0
-      ? `${nl.game.rollOf(state.rollsUsed, MAX_ROLLS)} · ${nl.game.holdHint}`
-      : nl.game.chooseBoxHint;
+  const status = !canPlay
+    ? onPhone
+      ? nl.phone.waitTurn
+      : nl.game.onPhone(player.name)
+    : !state.dice
+      ? nl.game.rollFirst
+      : rollsLeft > 0
+        ? `${nl.game.rollOf(state.rollsUsed, MAX_ROLLS)} · ${nl.game.holdHint}`
+        : nl.game.chooseBoxHint;
+  const heading = (name: string) =>
+    onPhone && canPlay ? nl.phone.yourTurn(name) : nl.game.turn(name);
 
   return (
     <main className="screen game-screen">
@@ -98,6 +118,11 @@ export function GameScreen({
                 {avatarEmoji(p.avatar)}
               </span>
               <span className="name">{p.name}</span>
+              {seats[i]?.controller === 'phone' && (
+                <span className="on-phone" role="img" aria-label={nl.game.phonePlayer}>
+                  📱
+                </span>
+              )}
               <span className="points">{totals(state.scorecards[i]!).grandTotal}</span>
             </li>
           ))}
@@ -106,8 +131,10 @@ export function GameScreen({
           <MuteButton muted={muted} onChange={onMute} />
           <GameMenu
             onRules={() => setOpen({ kind: 'rules' })}
-            onJoin={() => setOpen({ kind: 'join' })}
-            onStop={() => setOpen({ kind: 'stop' })}
+            {...(!onPhone && {
+              onJoin: () => setOpen({ kind: 'join' }),
+              onStop: () => setOpen({ kind: 'stop' }),
+            })}
           />
         </span>
       </header>
@@ -119,11 +146,11 @@ export function GameScreen({
             <div className="turn-names">
               {leaving && (
                 <p className="turn-banner leaving" aria-hidden="true">
-                  {nl.game.turn(leaving)}
+                  {heading(leaving)}
                 </p>
               )}
               <h2 key={turnId} className="turn-banner">
-                {nl.game.turn(player.name)}
+                {heading(player.name)}
               </h2>
             </div>
             <p className="turn-status">{status}</p>
@@ -131,7 +158,7 @@ export function GameScreen({
           <Dice
             dice={state.dice}
             held={state.held}
-            canHold={state.dice !== null && rollsLeft > 0}
+            canHold={canPlay && state.dice !== null && rollsLeft > 0}
             onToggle={(index) => run(() => actions.toggleHold(index))}
             theme={theme}
             rollId={rollId}
@@ -158,26 +185,29 @@ export function GameScreen({
               {error}
             </p>
           )}
-          <button
-            type="button"
-            className="button big roll-button"
-            disabled={rollsLeft === 0}
-            onClick={() => run(actions.roll)}
-          >
-            {rollsLeft > 0 ? (
-              <>
-                {nl.game.roll} <span className="badge">{nl.game.rollsLeft(rollsLeft)}</span>
-              </>
-            ) : (
-              nl.game.chooseBox
-            )}
-          </button>
+          {canPlay && (
+            <button
+              type="button"
+              className="button big roll-button"
+              disabled={rollsLeft === 0}
+              onClick={() => run(actions.roll)}
+            >
+              {rollsLeft > 0 ? (
+                <>
+                  {nl.game.roll} <span className="badge">{nl.game.rollsLeft(rollsLeft)}</span>
+                </>
+              ) : (
+                nl.game.chooseBox
+              )}
+            </button>
+          )}
         </section>
 
         <ScoreCard
-          player={player}
+          player={cardPlayer}
           card={card}
-          dice={state.dice}
+          // Point previews only for whoever may choose a box now.
+          dice={canPlay ? state.dice : null}
           onChoose={(box, points) => setOpen({ kind: 'confirm', box, points })}
         />
       </div>
@@ -292,8 +322,9 @@ function useLeavingName(turnId: string, name: string): string | null {
 
 interface GameMenuProps {
   onRules: () => void;
-  onJoin: () => void;
-  onStop: () => void;
+  /** Laptop only: the QR code for phones, and stopping the game. */
+  onJoin?: () => void;
+  onStop?: () => void;
 }
 
 /** The ☰ button with the less frequent actions: rules, a phone's QR code, stopping. */
@@ -341,12 +372,16 @@ function GameMenu({ onRules, onJoin, onStop }: GameMenuProps) {
           <button type="button" className="button soft" onClick={choose(onRules)}>
             {nl.game.rules}
           </button>
-          <button type="button" className="button soft" onClick={choose(onJoin)}>
-            {nl.join.menu}
-          </button>
-          <button type="button" className="button soft" onClick={choose(onStop)}>
-            {nl.game.stop}
-          </button>
+          {onJoin && (
+            <button type="button" className="button soft" onClick={choose(onJoin)}>
+              {nl.join.menu}
+            </button>
+          )}
+          {onStop && (
+            <button type="button" className="button soft" onClick={choose(onStop)}>
+              {nl.game.stop}
+            </button>
+          )}
         </span>
       )}
     </span>

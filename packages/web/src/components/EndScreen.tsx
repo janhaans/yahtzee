@@ -11,8 +11,9 @@ import { ScoreTable } from './ScoreTable';
 interface Props {
   state: GameState;
   theme?: ThemeId;
-  onRematch: () => void;
-  onNewGame: () => void;
+  /** Without these (on a phone) the next game is started on the laptop. */
+  onRematch?: () => void;
+  onNewGame?: () => void;
 }
 
 const TROPHIES: Record<number, string> = { 1: '🏆', 2: '🥈', 3: '🥉' };
@@ -84,14 +85,18 @@ export function EndScreen({ state, theme = DEFAULT_THEME, onRematch, onNewGame }
         ))}
       </ol>
 
-      <div className="end-actions">
-        <button type="button" className="button big" onClick={onRematch}>
-          {nl.end.rematch}
-        </button>
-        <button type="button" className="button end-new" onClick={onNewGame}>
-          {nl.end.newGame}
-        </button>
-      </div>
+      {onRematch && onNewGame ? (
+        <div className="end-actions">
+          <button type="button" className="button big" onClick={onRematch}>
+            {nl.end.rematch}
+          </button>
+          <button type="button" className="button end-new" onClick={onNewGame}>
+            {nl.end.newGame}
+          </button>
+        </div>
+      ) : (
+        <p className="hint end-actions">{nl.phone.nextGame}</p>
+      )}
 
       <div className="table-scroll">
         <ScoreTable players={state.players} scorecards={state.scorecards} winnerIds={winnerIds} />

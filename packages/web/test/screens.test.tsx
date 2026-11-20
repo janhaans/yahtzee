@@ -22,7 +22,7 @@ import { fetchRecentPlayers } from '../src/api';
 import { formatDateTime } from '../src/format';
 import { sound } from '../src/sound/engine';
 import type { ThemeId } from '@yahtzee/server/looks';
-import type { ActionResult } from '@yahtzee/server/protocol';
+import type { ActionResult, SeatInfo } from '@yahtzee/server/protocol';
 import { Lobby } from '../../server/src/lobby';
 import { GameRoom, TABLE } from '../../server/src/room';
 import type { GameActions } from '../src/useGame';
@@ -270,6 +270,67 @@ function renderSetup(
 }
 
 const names = (players: { name: string }[] | undefined) => players?.map((p) => p.name);
+
+describe('GameScreen with phones', () => {
+  const seat = (playerId: string, controller: 'table' | 'phone', takenOver = false): SeatInfo => ({
+    playerId,
+    controller,
+    online: true,
+    offlineSince: null,
+    takenOver,
+  });
+  const mixed = [seat('a', 'table'), seat('b', 'phone')];
+  // Emma (a) is playing; Sara (b) plays on her phone.
+  const sarasTurn = (): GameState => ({ ...gameWith([2, 3, 4, 5, 6]), currentPlayerIndex: 1 });
+
+  it('plays the turn of this phone: "Jouw beurt!", the roll button and point previews', async () => {
+    const actions = fakeActions();
+    render(<GameScreen state={sarasTurn()} actions={actions} seats={mixed} me="b" />);
+    expect(screen.getByRole('heading', { name: 'Jouw beurt, Sara!' })).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: /^Gooien!/ }));
+    expect(actions.roll).toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: /^Dobbelsteen 1/ }));
+    expect(actions.toggleHold).toHaveBeenCalledWith(0);
+    expect(screen.getByRole('button', { name: 'Grote straat: 40' })).toBeEnabled();
+
+    // A phone cannot stop the game or show the QR code, but can read the rules.
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.getByRole('button', { name: 'Regels' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Stop spel' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Telefoon koppelen' })).toBeNull();
+  });
+
+  it('waits on a phone: live dice, the scores and its own scorecard, nothing to tap', async () => {
+    const actions = fakeActions();
+    render(<GameScreen state={gameWith([2, 3, 4, 5, 6])} actions={actions} seats={mixed} me="b" />);
+    expect(screen.getByRole('heading', { name: 'Emma is aan de beurt' })).toBeVisible();
+    expect(screen.getByText('Even wachten... kijk maar mee!')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /^Gooien!/ })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Scorekaart Sara' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Grote straat: 40/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /^Dobbelsteen 1: 2/ })).toBeDisabled();
+    expect(screen.getByRole('list', { name: 'Stand' })).toHaveTextContent('Emma');
+  });
+
+  it('shows on the laptop that a phone player is playing, until the laptop takes over', () => {
+    const { rerender } = render(
+      <GameScreen state={sarasTurn()} actions={fakeActions()} seats={mixed} />,
+    );
+    expect(screen.getByRole('heading', { name: 'Sara is aan de beurt' })).toBeVisible();
+    expect(screen.getByText('Sara speelt op de telefoon 📱')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /^Gooien!/ })).toBeNull();
+    expect(screen.getAllByRole('img', { name: 'speelt op de telefoon' })).toHaveLength(1);
+
+    rerender(
+      <GameScreen
+        state={sarasTurn()}
+        actions={fakeActions()}
+        seats={[mixed[0]!, seat('b', 'phone', true)]}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /^Gooien!/ })).toBeVisible();
+  });
+});
 
 describe('SetupScreen', () => {
   it('shows the server error in Dutch', async () => {
@@ -523,6 +584,12 @@ describe('EndScreen', () => {
     status: 'finished',
     dice: null,
     scorecards: chances.map(full),
+  });
+
+  it('leaves the next game to the laptop on a phone', () => {
+    render(<EndScreen state={finished(20, 25)} />);
+    expect(screen.getByText('Nog een keer spelen? Dat start je op de laptop.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Nog een keer' })).toBeNull();
   });
 
   it('names the winner', () => {
