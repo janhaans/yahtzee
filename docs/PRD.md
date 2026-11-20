@@ -98,15 +98,15 @@ These are what turn a plain dice game into something a 12-year-old wants to play
 
 | Feature | Description | Priority |
 | --- | --- | --- |
-| **Themes** | Choose a look for the whole game. Two themes, based on what your daughter loves: *Voetbalstadion* (soccer): green pitch as the game table, dice that look like footballs, stadium lights and a cheering crowd; and *Snoepwinkel* (sweets): pastel candy colours, dice made of sugar cubes or gummy sweets, lollipops and sprinkles everywhere. The theme changes colours, background, dice, sounds and celebrations. | Must (both themes) |
+| **Themes** | Choose a look for the whole game. Two themes, based on what your daughter loves, in a modern, minimal style: a calm light background, white cards and one accent colour per theme. *Voetbalstadion* (soccer): grass green accent, a light-green dice table with white chalk lines, a cheering crowd. *Snoepwinkel* (sweets): candy pink accent, a light-pink dice table with a few sprinkles, happy jingles. The theme changes the accent colour, subtle details, sounds and celebrations. | Must (both themes) |
 | **Avatars and colours** | Each player picks a fun avatar and a colour. Soccer avatars (football, goalkeeper glove, trophy, a player in a team shirt) and sweet avatars (cupcake, lollipop, donut, ice cream, gummy bear), plus a few animals. Shown on the scorecard and on the "whose turn" banner. | Must |
-| **3D rolling dice** | Dice roll in 3D with the sound of rolling dice. **Laptop:** real 3D with physics (e.g. three.js with a physics engine): the dice are thrown onto the table, bounce off each other and the edges, and roll out. **Phones:** lighter CSS 3D cubes that spin and land on the right number, so it runs smoothly on every phone, including older ones. The server always decides the numbers; the animation only shows how the dice land on them. Held dice stay in place, wiggle and get a glowing border. In each theme the dice and sounds match (footballs on grass, sugar cubes or gummy sweets). Sound on iPhones starts after the first tap on the screen. Tapping skips the animation. | Must |
+| **3D rolling dice** | Dice roll in 3D with the sound of rolling dice. **Laptop:** real 3D with physics (e.g. three.js with a physics engine): the dice are thrown onto the table, bounce off each other and the edges, and roll out. **Phones:** lighter CSS 3D cubes that spin and land on the right number, so it runs smoothly on every phone, including older ones. The server always decides the numbers; the animation only shows how the dice land on them. Held dice stay in place, wiggle and get a glowing border. The dice are plain white with dark or accent-coloured pips; the sounds match the theme. Sound on iPhones starts after the first tap on the screen. Tapping skips the animation. | Must |
 | **Yahtzee celebration** | Five-of-a-kind triggers a giant "YAHTZEE!!!" banner with a theme celebration: in *Voetbalstadion* a ball flies into the net, the crowd roars "GOOOAL!" and fireworks go off; in *Snoepwinkel* it rains sweets and confetti sprinkles with a happy jingle. | Must |
 | **Funny messages** | Short random reactions in Dutch after events, matching the theme. Soccer: "Wat een knaller!", "Grote straat... recht op het doel af!", "Oei, nul punten. Dat was buitenspel!". Sweets: "Full House! Zoet als een snoepje!", "Mmm, wat een lekkere worp!", "Nul punten... die dobbelstenen hebben te veel suiker op." At least 30 messages per theme, never mean. | Must |
 | **Sound on/off** | Fun sound effects with a big mute button (for quiet moments). | Must |
 | **Turn banner** | Big animated banner: "Emma's turn!" with her avatar, so it's clear who rolls next. | Must |
 | **Winner party** | End screen with podium (1st, 2nd, 3rd), trophies, confetti and a dancing avatar for the winner. Every player gets a fun theme title, e.g. "Topscorer", "Man/Vrouw van de wedstrijd", "Snoepkoningin", "Suikerspin-kampioen". | Must |
-| **Dice skins** | Extra dice designs to choose from, e.g. club colours (your daughter's favourite club), Oranje dice, chocolate dice, candy-stripe dice, glitter. | Should |
+| **Dice skins** | Extra dice designs to choose from (the default dice are plain white), e.g. football dice, sugar-cube or gummy-sweet dice, club colours (your daughter's favourite club), Oranje dice, chocolate dice, candy-stripe dice, glitter. | Should |
 | **Badges** | Small achievements saved per player name, e.g. "First Yahtzee", "Bonus Hunter" (got the 35 bonus), "300 Club". | Could |
 | **Shake to roll** | On a tablet, shake the device to roll the dice. | Could |
 
@@ -285,6 +285,8 @@ The dashboard is a **separate page/app** (its own URL, e.g. `/dashboard`) that r
 - **Themes:** soccer (*Voetbalstadion*) and sweets (*Snoepwinkel*), both in version 1.
 - **Computer player name:** "Computer".
 - **3D dice (19-11-2026):** dice roll in 3D with rolling sound, built in milestone 4: real 3D with physics on the laptop, CSS 3D cubes on phones.
+- **Look and feel (20-11-2026):** modern and minimal, following the design mockups: light background, white cards, Nunito font, one accent per theme (Voetbalstadion #187A41, Snoepwinkel #C2255C); the theme shows only in subtle details.
+- **Dice (20-11-2026):** plain white dice in both themes. Themed dice (footballs, sugar cubes, gummy sweets) may return later as optional dice skins.
 
 **Roadmap: version 2 – computer opponent**
 
