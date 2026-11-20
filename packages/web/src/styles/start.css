@@ -22,6 +22,7 @@
 }
 
 .sound-switch {
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -177,4 +178,28 @@
   min-width: 300px;
   min-height: 72px;
   font-size: 1.5rem;
+}
+
+@media (max-width: 600px) {
+  .start-screen {
+    padding: 16px;
+  }
+
+  /* The big title follows right below, so the small one only shows the logo. */
+  .brand-text {
+    display: none;
+  }
+
+  .theme-picker {
+    gap: 16px;
+  }
+
+  .theme-art {
+    height: 120px;
+  }
+
+  .start-screen > .button.big {
+    align-self: stretch;
+    min-width: 0;
+  }
 }

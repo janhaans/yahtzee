@@ -1,10 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // 1366 x 650 is what a browser window really leaves on a 1366 x 768 laptop screen.
+// A phone (iPhone SE size) may scroll down, but never sideways.
 const VIEWPORTS = [
-  { width: 1366, height: 768 },
-  { width: 1366, height: 650 },
-  { width: 1920, height: 1080 },
+  { width: 1366, height: 768, scrolls: false },
+  { width: 1366, height: 650, scrolls: false },
+  { width: 1920, height: 1080, scrolls: false },
+  { width: 375, height: 667, scrolls: true },
 ];
 
 const MIN_TAP = 48;
@@ -35,10 +37,8 @@ async function startBusyGame(page: Page) {
 }
 
 for (const viewport of VIEWPORTS) {
-  test(`game screen fits ${viewport.width}x${viewport.height} without scrolling`, async ({
-    page,
-  }, testInfo) => {
-    await page.setViewportSize(viewport);
+  test(`game screen fits ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await startBusyGame(page);
 
     await testInfo.attach(`game-${viewport.width}x${viewport.height}`, {
@@ -50,7 +50,9 @@ for (const viewport of VIEWPORTS) {
       scrollHeight: document.documentElement.scrollHeight,
       scrollWidth: document.documentElement.scrollWidth,
     }));
-    expect(size.scrollHeight, 'no vertical scrollbar').toBeLessThanOrEqual(viewport.height);
+    if (!viewport.scrolls) {
+      expect(size.scrollHeight, 'no vertical scrollbar').toBeLessThanOrEqual(viewport.height);
+    }
     expect(size.scrollWidth, 'no horizontal scrollbar').toBeLessThanOrEqual(viewport.width);
 
     // Every button can be tapped on a 48 x 48 px area. Small buttons (like the (i) buttons)
@@ -59,6 +61,7 @@ for (const viewport of VIEWPORTS) {
       const half = min / 2 - 1;
       return [...document.querySelectorAll<HTMLElement>('.game-screen button')]
         .filter((button) => {
+          button.scrollIntoView({ block: 'center' });
           const r = button.getBoundingClientRect();
           if (r.width >= min && r.height >= min) return false;
           const x = r.left + r.width / 2;

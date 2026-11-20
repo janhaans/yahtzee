@@ -176,3 +176,70 @@
   min-height: 64px;
   font-size: 1.3rem;
 }
+
+.table-scroll {
+  align-self: stretch;
+  overflow-x: auto;
+  padding: 2px 2px 12px;
+}
+
+@media (max-width: 600px) {
+  .ranking.podium {
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .podium li {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .podium .avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 1.8rem;
+  }
+
+  .podium .winner .avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 2.4rem;
+  }
+
+  .podium .name {
+    font-size: 1.05rem;
+  }
+
+  .podium .title {
+    padding: 4px 8px;
+  }
+
+  .podium .place {
+    font-size: 1.8rem;
+  }
+
+  .podium .trophy {
+    font-size: 1.2rem;
+  }
+
+  .podium .points {
+    font-size: 16px;
+  }
+
+  .podium .step-1 {
+    height: 150px;
+  }
+
+  .podium .step-2 {
+    height: 115px;
+  }
+
+  .podium .step-3 {
+    height: 90px;
+  }
+
+  .podium .step-4 {
+    height: 70px;
+  }
+}

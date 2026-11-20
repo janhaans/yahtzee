@@ -27,7 +27,7 @@ export function StartScreen({
       <header className="start-bar">
         <span className="brand">
           <Logo />
-          {nl.appName}
+          <span className="brand-text">{nl.appName}</span>
         </span>
         <MuteButton muted={muted} onChange={onMute} variant="labelled" />
       </header>

@@ -417,3 +417,120 @@
 .filled {
   font-weight: 800;
 }
+
+/*
+ * Phone (docs/design/telefoon.png): the dice table on top, a wide Gooien! button and the
+ * scorecard as tiles. The scorecard is one column here, so every box keeps its (i) button
+ * with a 48 px tap area.
+ */
+@media (max-width: 600px) {
+  .game-screen {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .brand-name {
+    display: none;
+  }
+
+  .game-bar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+
+  .round {
+    justify-self: start;
+  }
+
+  .scores {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 2px;
+  }
+
+  .score-chip {
+    flex: none;
+    min-height: 48px;
+    padding-right: 14px;
+  }
+
+  .score-chip .avatar-circle {
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+  }
+
+  .dice-area {
+    gap: 12px;
+    padding: 16px 12px;
+    border-radius: 24px;
+  }
+
+  .turn-banner {
+    font-size: 1.5rem;
+  }
+
+  .turn-status {
+    font-size: 16px;
+  }
+
+  .message-slot {
+    min-height: 48px;
+  }
+
+  .bubble {
+    font-size: 1.05rem;
+    padding: 10px 18px;
+  }
+
+  .roll-button {
+    align-self: stretch;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .scorecard {
+    padding: 16px 12px;
+  }
+
+  .scorecard-sections {
+    grid-template-columns: 1fr;
+  }
+
+  .score-section ul {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .score-row {
+    margin: 0;
+    padding: 0 6px 0 16px;
+    border-radius: 16px;
+    background: var(--surface-2);
+  }
+
+  .score-row.done .box-name {
+    color: var(--muted);
+  }
+
+  .score-sum {
+    border-top: none;
+    padding: 8px 16px 0;
+  }
+
+  .score-total {
+    margin-top: 12px;
+    padding: 14px 18px;
+    border: none;
+    border-radius: 16px;
+    background: var(--text);
+    color: #fff;
+    font-size: 1.3rem;
+  }
+}

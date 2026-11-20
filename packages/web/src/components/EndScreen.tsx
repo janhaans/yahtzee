@@ -93,7 +93,9 @@ export function EndScreen({ state, theme = DEFAULT_THEME, onRematch, onNewGame }
         </button>
       </div>
 
-      <ScoreTable players={state.players} scorecards={state.scorecards} winnerIds={winnerIds} />
+      <div className="table-scroll">
+        <ScoreTable players={state.players} scorecards={state.scorecards} winnerIds={winnerIds} />
+      </div>
     </main>
   );
 }

@@ -1,5 +1,6 @@
 /* The dice: white rounded dice; held dice get an accent border and "Vast" underneath. */
 .dice {
+  --die-size: 92px;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -10,8 +11,8 @@
 /* A die is a button: the CSS cube or the 3D die is drawn inside or over it. */
 .die {
   position: relative;
-  width: 92px;
-  height: 92px;
+  width: var(--die-size);
+  height: var(--die-size);
   padding: 0;
   border: none;
   border-radius: 22px;
@@ -32,8 +33,8 @@
 }
 
 .pip {
-  width: 15px;
-  height: 15px;
+  width: calc(var(--die-size, 92px) * 0.16);
+  height: calc(var(--die-size, 92px) * 0.16);
   border-radius: 50%;
   background: var(--text);
 }
@@ -72,7 +73,7 @@
 .cube-face {
   position: absolute;
   inset: 0;
-  padding: 12px;
+  padding: calc(var(--die-size) * 0.13);
   border: 2px solid var(--die-edge);
   border-radius: var(--die-rounding);
   background: var(--die-face);
@@ -89,27 +90,27 @@
 }
 
 .face-1 {
-  transform: translateZ(46px);
+  transform: translateZ(calc(var(--die-size) / 2));
 }
 
 .face-2 {
-  transform: rotateY(90deg) translateZ(46px);
+  transform: rotateY(90deg) translateZ(calc(var(--die-size) / 2));
 }
 
 .face-3 {
-  transform: rotateX(90deg) translateZ(46px);
+  transform: rotateX(90deg) translateZ(calc(var(--die-size) / 2));
 }
 
 .face-4 {
-  transform: rotateX(-90deg) translateZ(46px);
+  transform: rotateX(-90deg) translateZ(calc(var(--die-size) / 2));
 }
 
 .face-5 {
-  transform: rotateY(-90deg) translateZ(46px);
+  transform: rotateY(-90deg) translateZ(calc(var(--die-size) / 2));
 }
 
 .face-6 {
-  transform: rotateY(180deg) translateZ(46px);
+  transform: rotateY(180deg) translateZ(calc(var(--die-size) / 2));
 }
 
 /* Dice skins for later: football patches and sugar crystals. */
@@ -137,7 +138,7 @@
 
 .cube-dice .die.held .cube-face {
   border: 5px solid var(--accent);
-  padding: 9px;
+  padding: calc(var(--die-size) * 0.13 - 3px);
 }
 
 .button-dice .die.held {
@@ -175,4 +176,15 @@
   height: 100%;
   pointer-events: none;
   z-index: 2;
+}
+
+@media (max-width: 600px) {
+  .dice {
+    --die-size: 58px;
+    gap: 8px;
+  }
+
+  .held-label {
+    font-size: 16px;
+  }
 }

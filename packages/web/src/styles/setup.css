@@ -211,3 +211,41 @@
     transform: translateX(10px) rotate(1deg);
   }
 }
+
+@media (max-width: 600px) {
+  .setup-screen {
+    padding: 16px;
+  }
+
+  .setup-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .setup-card {
+    padding: 14px;
+  }
+
+  .player-row {
+    position: relative;
+    padding: 12px;
+  }
+
+  .remove-player {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+  }
+
+  .name-field {
+    flex: 1 1 160px;
+  }
+
+  .setup-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .setup-footer .button.big {
+    min-width: 0;
+  }
+}
