@@ -10,7 +10,7 @@ test('a Yahtzee gets a giant celebration that a tap can end', async ({ page }) =
   await page.getByRole('button', { name: 'Nieuw spel' }).click();
   await page.getByRole('textbox').nth(0).fill('Emma');
   await page.getByRole('textbox').nth(1).fill('Sara');
-  await page.getByRole('button', { name: 'Start!' }).click();
+  await page.getByRole('button', { name: /^(Aftrappen!|Start het spel)$/ }).click();
   await page.locator('.turn-overlay').click();
 
   await page.getByRole('button', { name: /^Gooien!/ }).click();

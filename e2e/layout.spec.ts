@@ -21,10 +21,12 @@ async function startBusyGame(page: Page) {
     await page.getByRole('button', { name: 'Ja, stoppen' }).click();
   }
   await newGame.click();
-  await page.getByRole('button', { name: '4', exact: true }).click();
+  const add = page.getByRole('button', { name: '+ Speler toevoegen' });
+  await add.click();
+  await add.click();
   const names = ['Anne-Marijke Jo', 'Wilhelmina Sara', 'Noor', 'Lieke'];
   for (const [i, name] of names.entries()) await page.getByRole('textbox').nth(i).fill(name);
-  await page.getByRole('button', { name: 'Start!' }).click();
+  await page.getByRole('button', { name: /^(Aftrappen!|Start het spel)$/ }).click();
 
   await page.getByRole('button', { name: /^Gooien!/ }).click();
   await page.getByRole('button', { name: /^Dobbelsteen 1/ }).click();

@@ -17,7 +17,7 @@ async function startGame(page: Page, theme: string, names: string[]) {
   await page.getByRole('button', { name: 'Nieuw spel' }).click();
   const inputs = page.getByRole('textbox');
   for (const [i, name] of names.entries()) await inputs.nth(i).fill(name);
-  await page.getByRole('button', { name: 'Start!' }).click();
+  await page.getByRole('button', { name: /^(Aftrappen!|Start het spel)$/ }).click();
   await expect(page.getByText('Ronde 1 van 13')).toBeVisible();
 }
 
@@ -33,7 +33,7 @@ test('the chosen theme, avatars and colours are used and saved', async ({ page }
     .getByRole('group', { name: 'Kleur van speler 2' })
     .getByRole('button', { name: 'Blauw', exact: true })
     .click();
-  await page.getByRole('button', { name: 'Start!' }).click();
+  await page.getByRole('button', { name: /^(Aftrappen!|Start het spel)$/ }).click();
 
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'snoep');
   await expect(page.locator('.score-chip').nth(1)).toContainText('🦄');

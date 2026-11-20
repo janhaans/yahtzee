@@ -17,6 +17,7 @@ import { nl } from '../i18n/nl';
 import { reducedMotion } from '../motion';
 import type { ClientResult } from '../useGame';
 import { Dialog } from './Dialog';
+import { BackIcon } from './Icons';
 
 interface Props {
   onStart: (setup: GameSetup) => Promise<ClientResult>;
@@ -25,8 +26,6 @@ interface Props {
   /** Players from earlier games, most recent first, for quick setup. */
   recentPlayers?: readonly RecentPlayer[];
 }
-
-const COUNTS = Array.from({ length: MAX_PLAYERS - MIN_PLAYERS + 1 }, (_, i) => MIN_PLAYERS + i);
 
 /** How long the "Wie begint?" shuffle wiggles before the new order shows. */
 const SHUFFLE_MS = 800;
@@ -55,20 +54,24 @@ export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Prop
   const shuffleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(shuffleTimer.current), []);
 
-  const setCount = (count: number) =>
-    setRows((current) => {
-      const next = current.slice(0, count);
-      while (next.length < count) {
-        next.push(
-          newRow(
-            theme,
-            next.length,
-            next.map((r) => r.colour),
-          ),
-        );
-      }
-      return next;
-    });
+  const addRow = () =>
+    setRows((current) =>
+      current.length >= MAX_PLAYERS
+        ? current
+        : [
+            ...current,
+            newRow(
+              theme,
+              current.length,
+              current.map((r) => r.colour),
+            ),
+          ],
+    );
+
+  const removeRow = (index: number) =>
+    setRows((current) =>
+      current.length <= MIN_PLAYERS ? current : current.filter((_, i) => i !== index),
+    );
 
   const update = (index: number, change: Partial<NewPlayer>) =>
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...change } : row)));
@@ -110,26 +113,20 @@ export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Prop
 
   return (
     <main className="screen setup-screen">
-      <h1>{nl.setup.title}</h1>
-      <form onSubmit={submit}>
-        <fieldset className="count-picker">
-          <legend>{nl.setup.playerCount}</legend>
-          {COUNTS.map((count) => (
-            <button
-              key={count}
-              type="button"
-              className={rows.length === count ? 'button selected' : 'button'}
-              aria-pressed={rows.length === count}
-              onClick={() => setCount(count)}
-            >
-              {count}
-            </button>
-          ))}
-        </fieldset>
+      <header className="setup-header">
+        <button type="button" className="button round" aria-label={nl.setup.back} onClick={onBack}>
+          <BackIcon />
+        </button>
+        <div>
+          <h1>{nl.setup.title}</h1>
+          <p className="hint">{nl.setup.subtitle(nl.themes[theme].name)}</p>
+        </div>
+      </header>
 
+      <form className="card setup-card" onSubmit={submit}>
         <ol className={shuffling ? 'name-list shuffling' : 'name-list'}>
           {rows.map((row, i) => (
-            <li key={i} className="player-row" style={{ borderColor: row.colour }}>
+            <li key={i} className="player-row">
               <button
                 type="button"
                 className="avatar-button"
@@ -139,7 +136,7 @@ export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Prop
               >
                 {avatarEmoji(row.avatar)}
               </button>
-              <label>
+              <label className="name-field">
                 <span>{nl.setup.playerLabel(i + 1)}</span>
                 <input
                   value={row.name}
@@ -155,9 +152,25 @@ export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Prop
                 taken={rows.filter((_, j) => j !== i).map((r) => r.colour)}
                 onPick={(colour) => update(i, { colour })}
               />
+              {i >= MIN_PLAYERS && (
+                <button
+                  type="button"
+                  className="button round soft remove-player"
+                  aria-label={nl.setup.removePlayer(i + 1)}
+                  onClick={() => removeRow(i)}
+                >
+                  ✕
+                </button>
+              )}
             </li>
           ))}
         </ol>
+
+        {rows.length < MAX_PLAYERS && (
+          <button type="button" className="add-player" onClick={addRow}>
+            {nl.setup.addPlayer}
+          </button>
+        )}
 
         {suggestions.length > 0 && firstEmpty !== -1 && (
           <div className="recent-names">
@@ -166,7 +179,7 @@ export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Prop
               <button
                 key={player.name}
                 type="button"
-                className="button chip"
+                className="button soft chip"
                 aria-label={nl.setup.addRecent(player.name)}
                 onClick={() => addRecent(player)}
               >
@@ -182,15 +195,12 @@ export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Prop
           </p>
         )}
 
-        <div className="row">
-          <button type="button" className="button" onClick={onBack}>
-            {nl.setup.back}
-          </button>
-          <button type="button" className="button" disabled={shuffling} onClick={whoStarts}>
-            🎲 {nl.setup.whoStarts}
+        <div className="setup-footer">
+          <button type="button" className="button soft" disabled={shuffling} onClick={whoStarts}>
+            {nl.setup.whoStarts}
           </button>
           <button type="submit" className="button big" disabled={shuffling}>
-            {nl.setup.start}
+            {nl.setup.start[theme]}
           </button>
         </div>
       </form>
@@ -229,7 +239,7 @@ function ColourPicker({ seat, value, taken, onPick }: ColourPickerProps) {
             key={colour}
             type="button"
             className="swatch"
-            style={{ backgroundColor: colour }}
+            style={{ backgroundColor: colour, color: colour }}
             aria-pressed={colour === value}
             aria-label={isTaken ? nl.setup.colourTaken(name) : name}
             disabled={isTaken}

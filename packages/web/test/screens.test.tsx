@@ -158,7 +158,7 @@ describe('SetupScreen', () => {
     const [first, second] = screen.getAllByRole('textbox');
     await userEvent.type(first!, 'Emma');
     await userEvent.type(second!, ' emma ');
-    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
 
     expect(names(onStart)).toEqual(['Emma', ' emma ']);
     expect(screen.getByRole('alert')).toHaveTextContent('dezelfde naam');
@@ -166,10 +166,19 @@ describe('SetupScreen', () => {
 
   it('offers 2, 3 or 4 players', async () => {
     render(<SetupScreen onStart={vi.fn()} onBack={() => {}} theme="voetbal" />);
-    expect(screen.queryByRole('button', { name: '1' })).toBeNull();
-    expect(screen.queryByRole('button', { name: '5' })).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: '4' }));
+    expect(screen.getAllByRole('textbox')).toHaveLength(2);
+    // The first two players cannot be taken away.
+    expect(screen.queryByRole('button', { name: /weghalen/ })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: '+ Speler toevoegen' }));
+    await userEvent.click(screen.getByRole('button', { name: '+ Speler toevoegen' }));
     expect(screen.getAllByRole('textbox')).toHaveLength(4);
+    expect(screen.queryByRole('button', { name: '+ Speler toevoegen' })).toBeNull();
+
+    await userEvent.type(screen.getAllByRole('textbox')[3]!, 'Opa');
+    await userEvent.click(screen.getByRole('button', { name: 'Speler 3 weghalen' }));
+    const names = screen.getAllByRole('textbox').map((input) => (input as HTMLInputElement).value);
+    expect(names).toEqual(['', '', 'Opa']);
+    expect(screen.getByText('2 tot 4 spelers · thema Voetbalstadion')).toBeVisible();
   });
 });
 
@@ -191,9 +200,9 @@ describe('SetupScreen avatars and colours', () => {
   it('starts with theme avatars and different colours, and sends the theme', async () => {
     const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
     render(<SetupScreen onStart={onStart} onBack={() => {}} theme="snoep" />);
-    await userEvent.click(screen.getByRole('button', { name: '3' }));
+    await userEvent.click(screen.getByRole('button', { name: '+ Speler toevoegen' }));
     await fillNames('Emma', 'Sara', 'Papa');
-    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Start het spel' }));
     const setup = lastSetup(onStart);
     expect(setup.theme).toBe('snoep');
     expect(setup.players.map((p) => p.avatar)).toEqual(['cupcake', 'lollipop', 'donut']);
@@ -211,7 +220,7 @@ describe('SetupScreen avatars and colours', () => {
       expect(screen.queryByRole('dialog')).toBeNull();
     }
     await fillNames('Emma', 'Sara');
-    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
     expect(lastSetup(onStart).players.map((p) => p.avatar)).toEqual(['unicorn', 'unicorn']);
   });
 
@@ -229,11 +238,11 @@ describe('SetupScreen avatars and colours', () => {
     const first = screen.getByRole('group', { name: 'Kleur van speler 1' });
     expect(within(first).getByRole('button', { name: 'Blauw (al gekozen)' })).toBeDisabled();
 
-    await userEvent.click(screen.getByRole('button', { name: '4' }));
-    await userEvent.click(screen.getByRole('button', { name: '2' }));
-    await userEvent.click(screen.getByRole('button', { name: '3' }));
+    await userEvent.click(screen.getByRole('button', { name: '+ Speler toevoegen' }));
+    await userEvent.click(screen.getByRole('button', { name: '+ Speler toevoegen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Speler 4 weghalen' }));
     await fillNames('A', 'B', 'C');
-    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
     const colours = lastSetup(onStart).players.map((p) => p.colour);
     expect(colours[1]).toBe('#1f6fd1');
     expect(new Set(colours).size).toBe(3);
@@ -245,9 +254,9 @@ describe('SetupScreen avatars and colours', () => {
     render(<SetupScreen onStart={onStart} onBack={() => {}} theme="voetbal" />);
     await fillNames('Emma', 'Sara');
     await userEvent.click(screen.getByRole('button', { name: /Wie begint/ }));
-    expect(screen.getByRole('button', { name: 'Start!' })).toBeDisabled();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Start!' })).toBeEnabled());
-    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    expect(screen.getByRole('button', { name: 'Aftrappen!' })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Aftrappen!' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
     expect(lastSetup(onStart).players.map((p) => `${p.name}:${p.avatar}`)).toEqual([
       'Sara:glove',
       'Emma:football',
@@ -274,7 +283,7 @@ describe('SetupScreen recent names', () => {
     // A name already filled in is no longer suggested.
     expect(screen.queryByRole('button', { name: 'Sara meedoen' })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Emma meedoen' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
     expect(names(onStart)).toEqual(['Sara', 'Emma']);
   });
 
@@ -294,9 +303,9 @@ describe('SetupScreen recent names', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Emma meedoen' }));
     await userEvent.click(screen.getByRole('button', { name: 'Sara meedoen' }));
-    await userEvent.click(screen.getByRole('button', { name: '3' }));
+    await userEvent.click(screen.getByRole('button', { name: '+ Speler toevoegen' }));
     await userEvent.click(screen.getByRole('button', { name: 'Opa meedoen' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Start!' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
     const [emma, sara, opa] = lastSetup(onStart).players;
     expect(emma).toEqual({ name: 'Emma', avatar: 'panda', colour: '#c62828' });
     // Red is taken by Emma, so Sara keeps her own colour.

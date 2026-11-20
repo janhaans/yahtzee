@@ -17,10 +17,12 @@ async function openSetup(page: Page) {
 
 async function startGame(page: Page, names: string[]) {
   await openSetup(page);
-  await page.getByRole('button', { name: String(names.length), exact: true }).click();
+  for (let n = 2; n < names.length; n++) {
+    await page.getByRole('button', { name: '+ Speler toevoegen' }).click();
+  }
   const inputs = page.getByRole('textbox');
   for (const [i, name] of names.entries()) await inputs.nth(i).fill(name);
-  await page.getByRole('button', { name: 'Start!' }).click();
+  await page.getByRole('button', { name: /^(Aftrappen!|Start het spel)$/ }).click();
   await expect(page.getByText('Ronde 1 van 13')).toBeVisible();
 }
 
@@ -124,20 +126,24 @@ test('setup suggests names from earlier games', async ({ page }) => {
 
 test('setup allows 2 to 4 players with unique names', async ({ page }) => {
   await openSetup(page);
-  await expect(page.getByRole('button', { name: '1', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: '5', exact: true })).toHaveCount(0);
+  // Two players to start with; they cannot be taken away.
+  await expect(page.getByRole('textbox')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: /weghalen/ })).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Start!' }).click();
+  await page.getByRole('button', { name: /^(Aftrappen!|Start het spel)$/ }).click();
   await expect(page.getByRole('alert')).toHaveText('Iedere speler heeft een naam nodig.');
 
   const inputs = page.getByRole('textbox');
   await inputs.nth(0).fill('Anna Sophie');
   await inputs.nth(1).fill('  anna   SOPHIE ');
-  await page.getByRole('button', { name: 'Start!' }).click();
+  await page.getByRole('button', { name: /^(Aftrappen!|Start het spel)$/ }).click();
   await expect(page.getByRole('alert')).toContainText('dezelfde naam');
 
-  await page.getByRole('button', { name: '4', exact: true }).click();
+  const add = page.getByRole('button', { name: '+ Speler toevoegen' });
+  await add.click();
+  await add.click();
   await expect(inputs).toHaveCount(4);
+  await expect(add).toHaveCount(0);
 });
 
 test('the scorecard explains every box and the rules can be opened', async ({ page }) => {

@@ -93,11 +93,13 @@ export const nl = {
 
   setup: {
     title: 'Wie doen er mee?',
-    playerCount: 'Aantal spelers',
+    subtitle: (theme: string) => `2 tot 4 spelers · thema ${theme}`,
     playerLabel: (n: number) => `Speler ${n}`,
     namePlaceholder: 'Naam',
-    whoStarts: 'Wie begint?',
-    start: 'Start!',
+    addPlayer: '+ Speler toevoegen',
+    removePlayer: (n: number) => `Speler ${n} weghalen`,
+    whoStarts: 'Wie begint? Gooi!',
+    start: { voetbal: 'Aftrappen!', snoep: 'Start het spel' } satisfies Record<ThemeId, string>,
     back: 'Terug',
     recent: 'Eerder gespeeld:',
     addRecent: (name: string) => `${name} meedoen`,
