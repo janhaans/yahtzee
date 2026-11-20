@@ -107,6 +107,8 @@ export const nl = {
     avatarTitle: 'Kies je plaatje',
     colours: (n: number) => `Kleur van speler ${n}`,
     colourTaken: (colour: string) => `${colour} (al gekozen)`,
+    onPhone: '📱 op de telefoon',
+    phoneOffline: '📱 even weg...',
   },
 
   avatars: {
@@ -405,6 +407,7 @@ export const nl = {
     not_your_turn: 'Even geduld, je bent nog niet aan de beurt!',
     seat_taken: 'Die speler speelt al op een andere telefoon.',
     too_early: 'Nog heel even wachten, misschien komt de telefoon zo terug.',
+    no_lobby: 'Er wordt nu geen nieuw spel klaargezet.',
     disconnected: 'Even geen verbinding met de spelcomputer...',
   } satisfies Record<ActionError | 'disconnected', string>,
 } as const;

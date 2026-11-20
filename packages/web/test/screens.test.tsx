@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom/vitest';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useReducer } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createGame,
@@ -19,7 +20,10 @@ import { SetupScreen } from '../src/components/SetupScreen';
 import { UnfinishedDialog } from '../src/components/UnfinishedDialog';
 import { fetchRecentPlayers } from '../src/api';
 import { formatDateTime } from '../src/format';
-import type { GameSetup } from '@yahtzee/server/looks';
+import type { ThemeId } from '@yahtzee/server/looks';
+import type { ActionResult } from '@yahtzee/server/protocol';
+import { Lobby } from '../../server/src/lobby';
+import { GameRoom, TABLE } from '../../server/src/room';
 import type { GameActions } from '../src/useGame';
 
 afterEach(cleanup);
@@ -46,16 +50,9 @@ function gameWith(dice: Dice, first: Scorecard = card()): GameState {
   return { ...result.state, dice, rollsUsed: 1, scorecards: [first, card()] };
 }
 
-/** The player names of the last game setup passed to this mock. */
-function names(onStart: { mock: { calls: unknown[][] } }): string[] {
-  const setup = onStart.mock.calls.at(-1)![0] as GameSetup;
-  return setup.players.map((p) => p.name);
-}
-
 function fakeActions(): GameActions {
   const ok = () => Promise.resolve({ ok: true as const });
   return {
-    create: vi.fn(ok),
     roll: vi.fn(ok),
     toggleHold: vi.fn(ok),
     chooseBox: vi.fn(ok),
@@ -63,6 +60,7 @@ function fakeActions(): GameActions {
     rematch: vi.fn(ok),
     resume: vi.fn(ok),
     discardUnfinished: vi.fn(ok),
+    takeOver: vi.fn(ok),
   };
 }
 
@@ -221,25 +219,73 @@ describe('GameScreen', () => {
   });
 });
 
+/**
+ * The setup screen on a real lobby, the way the server keeps it, so these tests also show
+ * what the server does with every tap. `join` lets a phone join from outside.
+ */
+function renderSetup(
+  theme: ThemeId = 'voetbal',
+  recentPlayers: readonly { name: string; avatar: string; colour: string }[] = [],
+) {
+  const room = new GameRoom(Math.random, { history: { save() {}, findUnfinished: () => null } });
+  const lobby = new Lobby(room);
+  lobby.open(TABLE, theme);
+  let refresh = () => {};
+  function Live() {
+    const [, force] = useReducer((n: number) => n + 1, 0);
+    refresh = force;
+    const after = (result: ActionResult) => {
+      force();
+      return Promise.resolve(result);
+    };
+    if (lobby.state === null) return null;
+    return (
+      <SetupScreen
+        lobby={lobby.state}
+        actions={{
+          add: () => after(lobby.add(TABLE)),
+          update: (id, change) => after(lobby.update(TABLE, id, change)),
+          remove: (id) => after(lobby.remove(TABLE, id)),
+          reorder: (ids) => after(lobby.reorder(TABLE, ids)),
+          start: () => after(lobby.start(TABLE)),
+        }}
+        onBack={() => {}}
+        recentPlayers={recentPlayers}
+      />
+    );
+  }
+  render(<Live />);
+  return {
+    room,
+    /** The players of the started game, or undefined while the setup is open. */
+    started: () =>
+      room.state?.players.map(({ name, avatar, colour }) => ({ name, avatar, colour })),
+    join: (name: string, colour: string, online = true) => {
+      const result = lobby.join({ kind: 'phone', token: null }, { name, avatar: 'cat', colour });
+      if (result.ok && online) room.presence.connect(result.token);
+      act(() => refresh());
+    },
+  };
+}
+
+const names = (players: { name: string }[] | undefined) => players?.map((p) => p.name);
+
 describe('SetupScreen', () => {
   it('shows the server error in Dutch', async () => {
-    const onStart = vi.fn(() =>
-      Promise.resolve({ ok: false as const, error: 'duplicate_name' as const }),
-    );
-    render(<SetupScreen onStart={onStart} onBack={() => {}} theme="voetbal" />);
+    const setup = renderSetup();
     const [first, second] = screen.getAllByRole('textbox');
     await userEvent.type(first!, 'Emma');
     await userEvent.type(second!, ' emma ');
     await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
 
-    expect(names(onStart)).toEqual(['Emma', ' emma ']);
+    expect(setup.started()).toBeUndefined();
     expect(screen.getByRole('alert')).toHaveTextContent('dezelfde naam');
   });
 
   it('offers 2, 3 or 4 players', async () => {
-    render(<SetupScreen onStart={vi.fn()} onBack={() => {}} theme="voetbal" />);
+    renderSetup();
     expect(screen.getAllByRole('textbox')).toHaveLength(2);
-    // The first two players cannot be taken away.
+    // There are always at least two players.
     expect(screen.queryByRole('button', { name: /weghalen/ })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: '+ Speler toevoegen' }));
     await userEvent.click(screen.getByRole('button', { name: '+ Speler toevoegen' }));
@@ -248,19 +294,36 @@ describe('SetupScreen', () => {
 
     await userEvent.type(screen.getAllByRole('textbox')[3]!, 'Opa');
     await userEvent.click(screen.getByRole('button', { name: 'Speler 3 weghalen' }));
-    const names = screen.getAllByRole('textbox').map((input) => (input as HTMLInputElement).value);
-    expect(names).toEqual(['', '', 'Opa']);
+    const typed = screen.getAllByRole('textbox').map((input) => (input as HTMLInputElement).value);
+    expect(typed).toEqual(['', '', 'Opa']);
     expect(screen.getByText('2 tot 4 spelers · thema Voetbalstadion')).toBeVisible();
+  });
+
+  it('shows phone players as they join, and can send them away', async () => {
+    const setup = renderSetup();
+    await userEvent.type(screen.getAllByRole('textbox')[0]!, 'Emma');
+    setup.join('Sara', '#c62828');
+    setup.join('Noor', '#00838f', false);
+
+    // Sara took the empty second row; Noor came last.
+    expect(screen.getAllByRole('textbox')).toHaveLength(1);
+    expect(screen.getByText('Sara')).toBeVisible();
+    expect(screen.getByText('📱 op de telefoon')).toBeVisible();
+    expect(screen.getByText('📱 even weg...')).toBeVisible();
+    // A phone player's colour is taken for the laptop players too.
+    const first = screen.getByRole('group', { name: 'Kleur van speler 1' });
+    expect(within(first).getByRole('button', { name: 'Rood (al gekozen)' })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Speler 3 weghalen' }));
+    expect(screen.queryByText('Noor')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
+    expect(names(setup.started())).toEqual(['Emma', 'Sara']);
+    expect(setup.room.seats.map((seat) => seat.controller)).toEqual(['table', 'phone']);
   });
 });
 
 function recent(name: string, avatar = 'cat', colour = '#7b4fd6') {
   return { name, avatar, colour };
-}
-
-/** The last game setup passed to this mock. */
-function lastSetup(onStart: { mock: { calls: unknown[][] } }): GameSetup {
-  return onStart.mock.calls.at(-1)![0] as GameSetup;
 }
 
 async function fillNames(...typed: string[]) {
@@ -269,21 +332,19 @@ async function fillNames(...typed: string[]) {
 }
 
 describe('SetupScreen avatars and colours', () => {
-  it('starts with theme avatars and different colours, and sends the theme', async () => {
-    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
-    render(<SetupScreen onStart={onStart} onBack={() => {}} theme="snoep" />);
+  it('starts with theme avatars and different colours, and uses the theme', async () => {
+    const setup = renderSetup('snoep');
     await userEvent.click(screen.getByRole('button', { name: '+ Speler toevoegen' }));
     await fillNames('Emma', 'Sara', 'Papa');
     await userEvent.click(screen.getByRole('button', { name: 'Start het spel' }));
-    const setup = lastSetup(onStart);
-    expect(setup.theme).toBe('snoep');
-    expect(setup.players.map((p) => p.avatar)).toEqual(['cupcake', 'lollipop', 'donut']);
-    expect(new Set(setup.players.map((p) => p.colour)).size).toBe(3);
+    const players = setup.started()!;
+    expect(setup.room.theme).toBe('snoep');
+    expect(players.map((p) => p.avatar)).toEqual(['cupcake', 'lollipop', 'donut']);
+    expect(new Set(players.map((p) => p.colour)).size).toBe(3);
   });
 
   it('lets a player pick an avatar, the same one as someone else is fine', async () => {
-    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
-    render(<SetupScreen onStart={onStart} onBack={() => {}} theme="voetbal" />);
+    const setup = renderSetup();
     for (const seat of [1, 2]) {
       await userEvent.click(screen.getByRole('button', { name: new RegExp(`speler ${seat}:`) }));
       const dialog = screen.getByRole('dialog', { name: /Kies je plaatje/ });
@@ -293,12 +354,11 @@ describe('SetupScreen avatars and colours', () => {
     }
     await fillNames('Emma', 'Sara');
     await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
-    expect(lastSetup(onStart).players.map((p) => p.avatar)).toEqual(['unicorn', 'unicorn']);
+    expect(setup.started()!.map((p) => p.avatar)).toEqual(['unicorn', 'unicorn']);
   });
 
   it('only offers colours nobody else has', async () => {
-    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
-    render(<SetupScreen onStart={onStart} onBack={() => {}} theme="voetbal" />);
+    const setup = renderSetup();
     const second = screen.getByRole('group', { name: 'Kleur van speler 2' });
     // Player 1 has pink, so player 2 cannot take it.
     expect(within(second).getByRole('button', { name: 'Roze (al gekozen)' })).toBeDisabled();
@@ -315,21 +375,20 @@ describe('SetupScreen avatars and colours', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Speler 4 weghalen' }));
     await fillNames('A', 'B', 'C');
     await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
-    const colours = lastSetup(onStart).players.map((p) => p.colour);
+    const colours = setup.started()!.map((p) => p.colour);
     expect(colours[1]).toBe('#1f6fd1');
     expect(new Set(colours).size).toBe(3);
   });
 
   it('shuffles the order with "Wie begint?" and keeps each player\'s looks', async () => {
-    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
+    const setup = renderSetup();
     vi.spyOn(Math, 'random').mockReturnValue(0);
-    render(<SetupScreen onStart={onStart} onBack={() => {}} theme="voetbal" />);
     await fillNames('Emma', 'Sara');
     await userEvent.click(screen.getByRole('button', { name: /Wie begint/ }));
     expect(screen.getByRole('button', { name: 'Aftrappen!' })).toBeDisabled();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Aftrappen!' })).toBeEnabled());
     await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
-    expect(lastSetup(onStart).players.map((p) => `${p.name}:${p.avatar}`)).toEqual([
+    expect(setup.started()!.map((p) => `${p.name}:${p.avatar}`)).toEqual([
       'Sara:glove',
       'Emma:football',
     ]);
@@ -339,15 +398,7 @@ describe('SetupScreen avatars and colours', () => {
 
 describe('SetupScreen recent names', () => {
   it('fills the first empty field with a recent name', async () => {
-    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
-    render(
-      <SetupScreen
-        onStart={onStart}
-        onBack={() => {}}
-        theme="voetbal"
-        recentPlayers={[recent('Emma'), recent('Sara')]}
-      />,
-    );
+    const setup = renderSetup('voetbal', [recent('Emma'), recent('Sara')]);
     await userEvent.click(screen.getByRole('button', { name: 'Sara meedoen' }));
     expect(
       screen.getAllByRole('textbox').map((input) => (input as HTMLInputElement).value),
@@ -356,29 +407,21 @@ describe('SetupScreen recent names', () => {
     expect(screen.queryByRole('button', { name: 'Sara meedoen' })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Emma meedoen' }));
     await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
-    expect(names(onStart)).toEqual(['Sara', 'Emma']);
+    expect(names(setup.started())).toEqual(['Sara', 'Emma']);
   });
 
   it('brings back the last avatar and colour of a recent player, if still free', async () => {
-    const onStart = vi.fn(() => Promise.resolve({ ok: true as const }));
-    render(
-      <SetupScreen
-        onStart={onStart}
-        onBack={() => {}}
-        theme="voetbal"
-        recentPlayers={[
-          recent('Emma', 'panda', '#c62828'),
-          recent('Sara', 'fox', '#c62828'),
-          recent('Opa', 'old-avatar', '#123456'),
-        ]}
-      />,
-    );
+    const setup = renderSetup('voetbal', [
+      recent('Emma', 'panda', '#c62828'),
+      recent('Sara', 'fox', '#c62828'),
+      recent('Opa', 'old-avatar', '#123456'),
+    ]);
     await userEvent.click(screen.getByRole('button', { name: 'Emma meedoen' }));
     await userEvent.click(screen.getByRole('button', { name: 'Sara meedoen' }));
     await userEvent.click(screen.getByRole('button', { name: '+ Speler toevoegen' }));
     await userEvent.click(screen.getByRole('button', { name: 'Opa meedoen' }));
     await userEvent.click(screen.getByRole('button', { name: 'Aftrappen!' }));
-    const [emma, sara, opa] = lastSetup(onStart).players;
+    const [emma, sara, opa] = setup.started()!;
     expect(emma).toEqual({ name: 'Emma', avatar: 'panda', colour: '#c62828' });
     // Red is taken by Emma, so Sara keeps her own colour.
     expect(sara).toMatchObject({ name: 'Sara', avatar: 'fox', colour: '#2e8b57' });
@@ -387,14 +430,7 @@ describe('SetupScreen recent names', () => {
   });
 
   it('matches names ignoring case and extra spaces, and hides when every field is full', async () => {
-    render(
-      <SetupScreen
-        onStart={vi.fn()}
-        onBack={() => {}}
-        theme="voetbal"
-        recentPlayers={[recent('Anna Sophie'), recent('Noor')]}
-      />,
-    );
+    renderSetup('voetbal', [recent('Anna Sophie'), recent('Noor')]);
     const [first, second] = screen.getAllByRole('textbox');
     await userEvent.type(first!, ' anna   SOPHIE');
     expect(screen.queryByRole('button', { name: 'Anna Sophie meedoen' })).toBeNull();

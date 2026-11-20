@@ -7,22 +7,21 @@ import {
   isColour,
   type AvatarId,
   type Colour,
-  type GameSetup,
-  type NewPlayer,
-  type ThemeId,
 } from '@yahtzee/server/looks';
+import type { LobbyChange, LobbyPlayer, LobbyState } from '@yahtzee/server/protocol';
 import type { RecentPlayer } from '../api';
-import { avatarEmoji, defaultAvatar, freeColour } from '../avatars';
+import { avatarEmoji } from '../avatars';
 import { nl } from '../i18n/nl';
 import { reducedMotion } from '../motion';
-import type { ClientResult } from '../useGame';
+import type { ClientResult, LobbyActions } from '../useGame';
 import { Dialog } from './Dialog';
 import { BackIcon } from './Icons';
 
 interface Props {
-  onStart: (setup: GameSetup) => Promise<ClientResult>;
+  /** The new game as the server has it; phones join it by themselves. */
+  lobby: LobbyState;
+  actions: Pick<LobbyActions, 'add' | 'update' | 'remove' | 'reorder' | 'start'>;
   onBack: () => void;
-  theme: ThemeId;
   /** Players from earlier games, most recent first, for quick setup. */
   recentPlayers?: readonly RecentPlayer[];
 }
@@ -39,52 +38,31 @@ function shuffled<T>(items: readonly T[]): T[] {
   return copy;
 }
 
-function newRow(theme: ThemeId, seat: number, taken: readonly string[]): NewPlayer {
-  return { name: '', avatar: defaultAvatar(theme, seat), colour: freeColour(taken) };
-}
-
-export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Props) {
-  const [rows, setRows] = useState<NewPlayer[]>(() => {
-    const first = newRow(theme, 0, []);
-    return [first, newRow(theme, 1, [first.colour])];
-  });
+export function SetupScreen({ lobby, actions, onBack, recentPlayers = [] }: Props) {
+  const { theme, players: rows } = lobby;
   const [error, setError] = useState<string | null>(null);
-  const [picking, setPicking] = useState<number | null>(null);
+  const [picking, setPicking] = useState<string | null>(null);
   const [shuffling, setShuffling] = useState(false);
   const shuffleTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(shuffleTimer.current), []);
 
-  const addRow = () =>
-    setRows((current) =>
-      current.length >= MAX_PLAYERS
-        ? current
-        : [
-            ...current,
-            newRow(
-              theme,
-              current.length,
-              current.map((r) => r.colour),
-            ),
-          ],
-    );
+  // The server checks everything; its answer only decides which friendly message shows.
+  const run = async (action: () => Promise<ClientResult>) => {
+    const result = await action();
+    setError(result.ok ? null : nl.errors[result.error]);
+  };
+  const update = (row: LobbyPlayer, change: LobbyChange) =>
+    run(() => actions.update(row.id, change));
 
-  const removeRow = (index: number) =>
-    setRows((current) =>
-      current.length <= MIN_PLAYERS ? current : current.filter((_, i) => i !== index),
-    );
-
-  const update = (index: number, change: Partial<NewPlayer>) =>
-    setRows((current) => current.map((row, i) => (i === index ? { ...row, ...change } : row)));
-
-  // Suggest names nobody has typed yet; tapping one fills the first empty field.
+  // Suggest names nobody has typed yet; tapping one fills the first empty laptop player.
   const taken = new Set(rows.map((row) => nameKey(row.name)));
   const suggestions = recentPlayers.filter((player) => !taken.has(nameKey(player.name)));
-  const firstEmpty = rows.findIndex((row) => nameKey(row.name) === '');
+  const firstEmpty = rows.find((row) => row.controller === 'table' && nameKey(row.name) === '');
 
-  const addRecent = (player: RecentPlayer) => {
-    const others = rows.filter((_, i) => i !== firstEmpty).map((row) => row.colour);
+  const addRecent = (row: LobbyPlayer, player: RecentPlayer) => {
+    const others = rows.filter((r) => r !== row).map((r) => r.colour);
     // Bring back their last avatar and colour, if those can still be used.
-    update(firstEmpty, {
+    void update(row, {
       name: player.name,
       ...(isAvatar(player.avatar) && { avatar: player.avatar }),
       ...(isColour(player.colour) && !others.includes(player.colour) && { colour: player.colour }),
@@ -92,24 +70,25 @@ export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Prop
   };
 
   const whoStarts = () => {
+    const reorder = () => run(() => actions.reorder(shuffled(rows.map((row) => row.id))));
     if (reducedMotion()) {
-      setRows(shuffled);
+      void reorder();
       return;
     }
     setShuffling(true);
     clearTimeout(shuffleTimer.current);
     shuffleTimer.current = setTimeout(() => {
-      setRows(shuffled);
+      void reorder();
       setShuffling(false);
     }, SHUFFLE_MS);
   };
 
-  const submit = async (event: FormEvent) => {
+  const submit = (event: FormEvent) => {
     event.preventDefault();
-    // The server checks everything again; this answer only shows the friendly message.
-    const result = await onStart({ players: rows, theme });
-    if (!result.ok) setError(nl.errors[result.error]);
+    void run(actions.start);
   };
+
+  const pickingRow = rows.find((row) => row.id === picking);
 
   return (
     <main className="screen setup-screen">
@@ -125,54 +104,75 @@ export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Prop
 
       <form className="card setup-card" onSubmit={submit}>
         <ol className={shuffling ? 'name-list shuffling' : 'name-list'}>
-          {rows.map((row, i) => (
-            <li key={i} className="player-row">
-              <button
-                type="button"
-                className="avatar-button"
-                style={{ backgroundColor: row.colour }}
-                aria-label={`${nl.setup.chooseAvatar(i + 1)}: ${nl.avatars[row.avatar]}`}
-                onClick={() => setPicking(i)}
-              >
-                {avatarEmoji(row.avatar)}
-              </button>
-              <label className="name-field">
-                <span>{nl.setup.playerLabel(i + 1)}</span>
-                <input
-                  value={row.name}
-                  maxLength={MAX_NAME_LENGTH}
-                  placeholder={nl.setup.namePlaceholder}
-                  autoComplete="off"
-                  onChange={(event) => update(i, { name: event.target.value })}
-                />
-              </label>
-              <ColourPicker
-                seat={i}
-                value={row.colour}
-                taken={rows.filter((_, j) => j !== i).map((r) => r.colour)}
-                onPick={(colour) => update(i, { colour })}
-              />
-              {i >= MIN_PLAYERS && (
+          {rows.map((row, i) =>
+            row.controller === 'phone' ? (
+              <li key={row.id} className="player-row phone-player">
+                <span
+                  className="avatar-button"
+                  style={{ backgroundColor: row.colour }}
+                  aria-hidden="true"
+                >
+                  {avatarEmoji(row.avatar)}
+                </span>
+                <span className="name-field">
+                  <span>{nl.setup.playerLabel(i + 1)}</span>
+                  <strong className="phone-name">{row.name}</strong>
+                </span>
+                <span className={row.online ? 'phone-badge' : 'phone-badge offline'}>
+                  {row.online ? nl.setup.onPhone : nl.setup.phoneOffline}
+                </span>
                 <button
                   type="button"
                   className="button round soft remove-player"
                   aria-label={nl.setup.removePlayer(i + 1)}
-                  onClick={() => removeRow(i)}
+                  onClick={() => run(() => actions.remove(row.id))}
                 >
                   ✕
                 </button>
-              )}
-            </li>
-          ))}
+              </li>
+            ) : (
+              <li key={row.id} className="player-row">
+                <button
+                  type="button"
+                  className="avatar-button"
+                  style={{ backgroundColor: row.colour }}
+                  aria-label={`${nl.setup.chooseAvatar(i + 1)}: ${nl.avatars[row.avatar]}`}
+                  onClick={() => setPicking(row.id)}
+                >
+                  {avatarEmoji(row.avatar)}
+                </button>
+                <label className="name-field">
+                  <span>{nl.setup.playerLabel(i + 1)}</span>
+                  <NameInput value={row.name} onChange={(name) => update(row, { name })} />
+                </label>
+                <ColourPicker
+                  seat={i}
+                  value={row.colour}
+                  taken={rows.filter((r) => r !== row).map((r) => r.colour)}
+                  onPick={(colour) => update(row, { colour })}
+                />
+                {rows.length > MIN_PLAYERS && (
+                  <button
+                    type="button"
+                    className="button round soft remove-player"
+                    aria-label={nl.setup.removePlayer(i + 1)}
+                    onClick={() => run(() => actions.remove(row.id))}
+                  >
+                    ✕
+                  </button>
+                )}
+              </li>
+            ),
+          )}
         </ol>
 
         {rows.length < MAX_PLAYERS && (
-          <button type="button" className="add-player" onClick={addRow}>
+          <button type="button" className="add-player" onClick={() => run(actions.add)}>
             {nl.setup.addPlayer}
           </button>
         )}
 
-        {suggestions.length > 0 && firstEmpty !== -1 && (
+        {suggestions.length > 0 && firstEmpty && (
           <div className="recent-names">
             <span className="hint">{nl.setup.recent}</span>
             {suggestions.map((player) => (
@@ -181,7 +181,7 @@ export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Prop
                 type="button"
                 className="button soft chip"
                 aria-label={nl.setup.addRecent(player.name)}
-                onClick={() => addRecent(player)}
+                onClick={() => addRecent(firstEmpty, player)}
               >
                 {avatarEmoji(player.avatar)} {player.name}
               </button>
@@ -205,18 +205,40 @@ export function SetupScreen({ onStart, onBack, theme, recentPlayers = [] }: Prop
         </div>
       </form>
 
-      {picking !== null && (
+      {pickingRow && (
         <AvatarDialog
-          seat={picking}
-          value={rows[picking]!.avatar}
+          seat={rows.indexOf(pickingRow)}
+          value={pickingRow.avatar}
           onPick={(avatar) => {
-            update(picking, { avatar });
+            void update(pickingRow, { avatar });
             setPicking(null);
           }}
           onClose={() => setPicking(null)}
         />
       )}
     </main>
+  );
+}
+
+/**
+ * A name field that keeps what is being typed while it has focus, so the round trip to the
+ * server never moves the cursor. It follows the server again once it loses focus.
+ */
+function NameInput({ value, onChange }: { value: string; onChange: (name: string) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <input
+      value={draft ?? value}
+      maxLength={MAX_NAME_LENGTH}
+      placeholder={nl.setup.namePlaceholder}
+      autoComplete="off"
+      onFocus={() => setDraft(value)}
+      onBlur={() => setDraft(null)}
+      onChange={(event) => {
+        setDraft(event.target.value);
+        onChange(event.target.value);
+      }}
+    />
   );
 }
 

@@ -1,5 +1,5 @@
 import type { GameState, MoveError, Player, SetupError } from '@yahtzee/game-logic';
-import type { GameSetup, ThemeId } from './looks.js';
+import type { AvatarId, Colour, NewPlayer, ThemeId } from './looks.js';
 
 /**
  * Socket.IO events between the clients and the server. Clients only send intentions;
@@ -23,7 +23,9 @@ export type ActionError =
   /** "Wie ben jij?": that player is still playing on another phone. */
   | 'seat_taken'
   /** The laptop can only take over a turn after the phone was gone for a while. */
-  | 'too_early';
+  | 'too_early'
+  /** Nobody is setting up a new game on the laptop right now. */
+  | 'no_lobby';
 
 export type ActionResult = { ok: true } | { ok: false; error: ActionError };
 
@@ -51,6 +53,27 @@ export interface SeatInfo {
 export type SeatResult =
   { ok: true; playerId: string; token: string } | { ok: false; error: ActionError };
 
+/** A player in the lobby, while the laptop sets up a new game. */
+export interface LobbyPlayer {
+  readonly id: string;
+  /** May be empty for a laptop player whose name is still being typed. */
+  readonly name: string;
+  readonly avatar: AvatarId;
+  readonly colour: Colour;
+  readonly controller: Controller;
+  /** Always true for laptop players. */
+  readonly online: boolean;
+}
+
+/** The new game being set up: its theme and players in playing order. */
+export interface LobbyState {
+  readonly theme: ThemeId;
+  readonly players: readonly LobbyPlayer[];
+}
+
+/** A change to a player in the lobby. */
+export type LobbyChange = Partial<NewPlayer>;
+
 /** How a screen introduces itself when it connects (Socket.IO `auth`). */
 export type Hello = { role: 'table' } | { role: 'phone'; token?: string | null };
 
@@ -63,8 +86,22 @@ export interface UnfinishedGame {
 }
 
 export interface ClientToServerEvents {
-  /** Start a new game. Players are in playing order; the server adds ids and types. */
-  'game:create': (payload: GameSetup, ack: Ack) => void;
+  /** Laptop: open the lobby for a new game, with two empty laptop players. */
+  'lobby:open': (payload: { theme: ThemeId }, ack: Ack) => void;
+  /** Laptop: back to the start screen; phones in the lobby are sent away. */
+  'lobby:close': (ack: Ack) => void;
+  /** Laptop: one more laptop player. */
+  'lobby:add': (ack: Ack) => void;
+  /** The laptop changes a laptop player; a phone changes its own player. */
+  'lobby:update': (payload: { id: string; change: LobbyChange }, ack: Ack) => void;
+  /** The laptop removes anyone; a phone leaves. */
+  'lobby:remove': (payload: { id: string }, ack: Ack) => void;
+  /** Laptop: a new playing order ("Wie begint?"), as all lobby ids. */
+  'lobby:reorder': (payload: { ids: readonly string[] }, ack: Ack) => void;
+  /** Phone: join the new game. Answers with the seat token for this phone. */
+  'lobby:join': (payload: NewPlayer, ack: (result: SeatResult) => void) => void;
+  /** Laptop: start the game with the players in the lobby. */
+  'lobby:start': (ack: Ack) => void;
   'game:roll': (ack: Ack) => void;
   'game:toggleHold': (payload: { index: number }, ack: Ack) => void;
   'game:chooseBox': (payload: { box: string }, ack: Ack) => void;
@@ -84,6 +121,8 @@ export interface ClientToServerEvents {
 export interface ServerToClientEvents {
   /** The full game state, sent on connect and after every change. Null when there is no game. */
   'game:state': (state: GameState | null) => void;
+  /** The new game being set up on the laptop, or null. */
+  'lobby:state': (lobby: LobbyState | null) => void;
   /** The theme of the game on the table, sent before its state. Null when there is no game. */
   'game:theme': (theme: ThemeId | null) => void;
   /** The unfinished game waiting for a choice (continue or stop), or null. */
@@ -92,6 +131,6 @@ export interface ServerToClientEvents {
   'history:saveFailed': (failed: boolean) => void;
   /** Where every player of the game plays, in playing order. */
   'game:seats': (seats: readonly SeatInfo[]) => void;
-  /** Only to phones: the player this phone plays, or null. */
+  /** Only to phones: the player this phone plays, in the lobby or the game, or null. */
   'seat:you': (playerId: string | null) => void;
 }

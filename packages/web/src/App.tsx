@@ -14,7 +14,16 @@ import { useGame } from './useGame';
 
 /** The game table on the laptop (route `/`). */
 export function App() {
-  const { state, theme: gameTheme, connected, unfinished, saveFailed, actions } = useGame();
+  const {
+    state,
+    theme: gameTheme,
+    connected,
+    lobby,
+    unfinished,
+    saveFailed,
+    actions,
+    lobbyActions,
+  } = useGame();
   const [preferredTheme, setPreferredTheme] = useThemePreference();
   const [muted, setMuted] = useMuted();
   const [dice3D] = useState(canUse3D);
@@ -30,19 +39,14 @@ export function App() {
       window.removeEventListener('keydown', unlock, true);
     };
   }, []);
-  const [view, setView] = useState<'start' | 'setup'>('start');
-  const recentPlayers = useRecentPlayers(view === 'setup');
-  const status = state?.status;
+  // The server decides the screen: the lobby while a new game is set up, then the game.
+  const recentPlayers = useRecentPlayers(lobby !== null);
+  const newGame = () => void lobbyActions.open(preferredTheme);
 
-  // Once a game is running, leaving it (finished or stopped) starts from the start screen.
-  useEffect(() => {
-    if (status === 'in_progress') setView('start');
-  }, [status]);
-
-  // The game on the table keeps its own theme; otherwise the theme picked for the next game.
+  // The game on the table keeps its own theme; the lobby has the theme of the next game.
   const showsGame =
-    state?.status === 'in_progress' || (state?.status === 'finished' && view === 'start');
-  const theme = (showsGame && gameTheme) || preferredTheme;
+    lobby === null && (state?.status === 'in_progress' || state?.status === 'finished');
+  const theme = lobby?.theme ?? ((showsGame && gameTheme) || preferredTheme);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
@@ -53,6 +57,15 @@ export function App() {
       <main className="screen">
         <p className="hint">{nl.start.connecting}</p>
       </main>
+    );
+  } else if (lobby !== null) {
+    screen = (
+      <SetupScreen
+        lobby={lobby}
+        actions={lobbyActions}
+        onBack={() => void lobbyActions.close()}
+        recentPlayers={recentPlayers}
+      />
     );
   } else if (state?.status === 'in_progress') {
     screen = (
@@ -65,22 +78,13 @@ export function App() {
         dice3D={dice3D}
       />
     );
-  } else if (state?.status === 'finished' && view === 'start') {
+  } else if (state?.status === 'finished') {
     screen = (
       <EndScreen
         state={state}
         theme={theme}
         onRematch={() => void actions.rematch()}
-        onNewGame={() => setView('setup')}
-      />
-    );
-  } else if (view === 'setup') {
-    screen = (
-      <SetupScreen
-        onStart={actions.create}
-        onBack={() => setView('start')}
-        theme={preferredTheme}
-        recentPlayers={recentPlayers}
+        onNewGame={newGame}
       />
     );
   } else {
@@ -90,7 +94,7 @@ export function App() {
         onTheme={setPreferredTheme}
         muted={muted}
         onMute={setMuted}
-        onNewGame={() => setView('setup')}
+        onNewGame={newGame}
       />
     );
   }

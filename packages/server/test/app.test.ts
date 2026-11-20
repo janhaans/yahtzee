@@ -9,8 +9,11 @@ import { buildApp, clientAddress, type App } from '../src/app.js';
 import type { GameList, GameDetail } from '../src/history/api.js';
 import { openDatabase, type Database } from '../src/history/db.js';
 import { HistoryStore } from '../src/history/store.js';
+import type { GameSetup } from '../src/looks.js';
 import type {
+  ActionResult,
   ClientToServerEvents,
+  LobbyState,
   SeatInfo,
   ServerToClientEvents,
   UnfinishedGame,
@@ -47,6 +50,18 @@ function join(url: string): Promise<{ client: Client; states: (GameState | null)
   });
 }
 
+/** Sets up a game through the lobby, the way the laptop does. */
+async function createGame(client: Client, setup: GameSetup): Promise<ActionResult> {
+  const opened = await client.emitWithAck('lobby:open', { theme: setup.theme });
+  if (!opened.ok) return opened;
+  for (let n = 2; n < setup.players.length; n++) await client.emitWithAck('lobby:add');
+  const ids = app!.lobby.state!.players.map((p) => p.id);
+  for (const [i, change] of setup.players.entries()) {
+    await client.emitWithAck('lobby:update', { id: ids[i]!, change });
+  }
+  return client.emitWithAck('lobby:start');
+}
+
 async function stop(): Promise<void> {
   clients.forEach((c) => c.disconnect());
   clients = [];
@@ -65,21 +80,21 @@ describe('socket server', () => {
     const b = await join(url);
     expect(a.states).toEqual([null]);
 
-    const result = await a.client.emitWithAck('game:create', lineup(['Emma', 'Sara']));
+    const result = await createGame(a.client, lineup(['Emma', 'Sara']));
     expect(result).toEqual({ ok: true });
-    await expect.poll(() => b.states.length).toBe(2);
-    expect(b.states[1]?.players.map((p) => p.name)).toEqual(['Emma', 'Sara']);
+    await expect.poll(() => b.states.at(-1)?.players.map((p) => p.name)).toEqual(['Emma', 'Sara']);
 
     expect(await a.client.emitWithAck('game:roll')).toEqual({ ok: true });
-    await expect.poll(() => b.states[2]?.dice).toHaveLength(5);
+    await expect.poll(() => b.states.at(-1)?.dice).toHaveLength(5);
   });
 
   it('answers bad intentions with an error and does not broadcast', async () => {
     const url = await start();
     const a = await join(url);
-    await a.client.emitWithAck('game:create', lineup(['Emma', 'Sara']));
+    await createGame(a.client, lineup(['Emma', 'Sara']));
     await a.client.emitWithAck('game:roll');
-    await expect.poll(() => a.states.length).toBe(3);
+    await expect.poll(() => a.states.at(-1)?.dice).toHaveLength(5);
+    const seen = a.states.length;
 
     const send = a.client.emitWithAck.bind(a.client) as (...args: unknown[]) => Promise<unknown>;
     expect(await send('game:chooseBox', { box: 'bonus' })).toEqual({
@@ -88,11 +103,11 @@ describe('socket server', () => {
     });
     expect(await send('game:chooseBox', null)).toEqual({ ok: false, error: 'invalid_input' });
     expect(await send('game:toggleHold', 'x')).toEqual({ ok: false, error: 'invalid_input' });
-    expect(await send('game:create', lineup(['Noor', 'Lieke']))).toEqual({
+    expect(await createGame(a.client, lineup(['Noor', 'Lieke']))).toEqual({
       ok: false,
       error: 'game_in_progress',
     });
-    expect(a.states.length).toBe(3);
+    expect(a.states.length).toBe(seen);
   });
 
   it('sends the theme of the game before its state', async () => {
@@ -101,16 +116,15 @@ describe('socket server', () => {
     const events: string[] = [];
     a.client.on('game:theme', (theme) => events.push(`theme:${theme}`));
     a.client.on('game:state', (state) => events.push(`state:${state?.status}`));
-    await a.client.emitWithAck('game:create', lineup(['Emma', 'Sara'], 'snoep'));
-    await expect.poll(() => events).toEqual(['theme:snoep', 'state:in_progress']);
+    await createGame(a.client, lineup(['Emma', 'Sara'], 'snoep'));
+    await expect.poll(() => events.slice(-2)).toEqual(['theme:snoep', 'state:in_progress']);
   });
 
   it('survives intentions sent without an acknowledgement callback', async () => {
     const url = await start();
     const a = await join(url);
-    a.client.emit('game:create', lineup(['Emma', 'Sara']) as never, undefined as never);
-    await expect.poll(() => a.states.length).toBe(2);
-    expect(app!.room.state?.status).toBe('in_progress');
+    a.client.emit('lobby:open', { theme: 'snoep' } as never, undefined as never);
+    await expect.poll(() => app!.lobby.state?.theme).toBe('snoep');
   });
 });
 
@@ -142,7 +156,7 @@ describe('who may act', () => {
     const url = await start();
     const p = phone(url);
     await expect.poll(() => p.you).toEqual([null]);
-    expect(await p.client.emitWithAck('game:create', lineup(['Emma', 'Sara']))).toEqual({
+    expect(await createGame(p.client, lineup(['Emma', 'Sara']))).toEqual({
       ok: false,
       error: 'not_allowed',
     });
@@ -154,13 +168,13 @@ describe('who may act', () => {
       extraHeaders: { 'x-forwarded-for': '192.168.1.30' },
     });
     clients.push(proxied);
-    expect(await proxied.emitWithAck('game:create', lineup(['Emma', 'Sara']))).toEqual({
+    expect(await createGame(proxied, lineup(['Emma', 'Sara']))).toEqual({
       ok: false,
       error: 'not_allowed',
     });
 
     const table = await join(url);
-    expect(await table.client.emitWithAck('game:create', lineup(['Emma', 'Sara']))).toEqual({
+    expect(await createGame(table.client, lineup(['Emma', 'Sara']))).toEqual({
       ok: true,
     });
     for (const event of ['game:abort', 'game:takeOver', 'game:rematch'] as const) {
@@ -170,6 +184,56 @@ describe('who may act', () => {
       ok: false,
       error: 'not_allowed',
     });
+  });
+
+  it('lets a phone join the lobby and play its turns in the game', async () => {
+    const url = await start(memoryHistory(), new GameRoom(always(6), { history: memoryHistory() }));
+    const table = await join(url);
+    const lobbies: (LobbyState | null)[] = [];
+    table.client.on('lobby:state', (lobby) => lobbies.push(lobby));
+    await table.client.emitWithAck('lobby:open', { theme: 'voetbal' });
+    const emmaId = app!.lobby.state!.players[0]!.id;
+    await table.client.emitWithAck('lobby:update', { id: emmaId, change: { name: 'Emma' } });
+
+    const p = phone(url);
+    const joined = await p.client.emitWithAck('lobby:join', {
+      name: 'Sara',
+      avatar: 'cat',
+      colour: '#c62828',
+    });
+    expect(joined).toMatchObject({ ok: true });
+    const saraId = (joined as { playerId: string }).playerId;
+    await expect.poll(() => p.you.at(-1)).toBe(saraId);
+    await expect
+      .poll(() => lobbies.at(-1)?.players.map((pl) => [pl.name, pl.controller, pl.online]))
+      .toEqual([
+        ['Emma', 'table', true],
+        ['Sara', 'phone', true],
+      ]);
+    expect(
+      await p.client.emitWithAck('lobby:update', { id: saraId, change: { avatar: 'fox' } }),
+    ).toEqual({ ok: true });
+    for (const event of ['lobby:add', 'lobby:start', 'lobby:close'] as const) {
+      expect(await p.client.emitWithAck(event)).toEqual({ ok: false, error: 'not_allowed' });
+    }
+
+    expect(await table.client.emitWithAck('lobby:start')).toEqual({ ok: true });
+    await expect.poll(() => lobbies.at(-1)).toBeNull();
+    await table.client.emitWithAck('game:roll');
+    await table.client.emitWithAck('game:chooseBox', { box: 'sixes' });
+    expect(await p.client.emitWithAck('game:roll')).toEqual({ ok: true });
+    expect(await p.client.emitWithAck('game:toggleHold', { index: 1 })).toEqual({ ok: true });
+    expect(await p.client.emitWithAck('game:chooseBox', { box: 'sixes' })).toEqual({ ok: true });
+    await expect.poll(() => p.you.at(-1)).toBe(saraId);
+
+    // Reordering and removing are for the laptop.
+    await table.client.emitWithAck('game:abort');
+    await table.client.emitWithAck('lobby:open', { theme: 'voetbal' });
+    const ids = app!.lobby.state!.players.map((pl) => pl.id);
+    expect(await table.client.emitWithAck('lobby:reorder', { ids: [ids[1]!, ids[0]!] })).toEqual({
+      ok: true,
+    });
+    expect(await table.client.emitWithAck('lobby:remove', { id: ids[0]! })).toEqual({ ok: true });
   });
 
   it('lets a phone claim a player, play its turns and come back after a lost connection', async () => {
@@ -240,7 +304,7 @@ describe('unfinished game after a restart', () => {
 
     let url = await startOnFile(path);
     const first = await join(url);
-    await first.client.emitWithAck('game:create', lineup(['Emma', 'Sara']));
+    await createGame(first.client, lineup(['Emma', 'Sara']));
     await first.client.emitWithAck('game:roll');
     await first.client.emitWithAck('game:toggleHold', { index: 2 });
     const before = app!.room.state;
@@ -252,7 +316,7 @@ describe('unfinished game after a restart', () => {
     const second = await joinWithUnfinished(url);
     expect(second.unfinished[0]).toMatchObject({ round: 1 });
     expect(second.unfinished[0]!.players.map((p) => p.name)).toEqual(['Emma', 'Sara']);
-    expect(await second.client.emitWithAck('game:create', lineup(['Noor', 'Lieke']))).toEqual({
+    expect(await createGame(second.client, lineup(['Noor', 'Lieke']))).toEqual({
       ok: false,
       error: 'unfinished_game',
     });
@@ -267,7 +331,7 @@ describe('unfinished game after a restart', () => {
     const path = joinPath(dir, 'yahtzee.db');
     let url = await startOnFile(path);
     const first = await join(url);
-    await first.client.emitWithAck('game:create', lineup(['Emma', 'Sara']));
+    await createGame(first.client, lineup(['Emma', 'Sara']));
     await first.client.emitWithAck('game:roll');
     await stop();
     db!.close();
@@ -292,7 +356,7 @@ describe('save warning', () => {
     client.on('history:saveFailed', (failed) => warnings.push(failed));
     await expect.poll(() => warnings).toEqual([false]);
 
-    await client.emitWithAck('game:create', lineup(['Emma', 'Sara']));
+    await createGame(client, lineup(['Emma', 'Sara']));
     flaky.failing = true;
     await client.emitWithAck('game:roll');
     await expect.poll(() => warnings.at(-1)).toBe(true);

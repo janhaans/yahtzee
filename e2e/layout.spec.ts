@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openSetup } from './helpers';
 
 // 1366 x 650 is what a browser window really leaves on a 1366 x 768 laptop screen.
 // A phone (iPhone SE size) may scroll down, but never sideways.
@@ -14,16 +15,7 @@ const MIN_FONT = 16;
 
 /** Starts a 4-player game (the widest top bar) with long names, rolls and holds one die. */
 async function startBusyGame(page: Page) {
-  await page.goto('/');
-  const menu = page.getByRole('button', { name: 'Menu' });
-  const newGame = page.getByRole('button', { name: 'Nieuw spel' });
-  await expect(menu.or(newGame)).toBeVisible();
-  if (await menu.isVisible()) {
-    await menu.click();
-    await page.getByRole('button', { name: 'Stop spel' }).click();
-    await page.getByRole('button', { name: 'Ja, stoppen' }).click();
-  }
-  await newGame.click();
+  await openSetup(page);
   const add = page.getByRole('button', { name: '+ Speler toevoegen' });
   await add.click();
   await add.click();

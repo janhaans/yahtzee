@@ -1,20 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openSetup } from './helpers';
 import type { GameList } from '@yahtzee/server/api';
-
-/** Opens the game table and makes sure no game is running, then opens player setup. */
-async function openSetup(page: Page) {
-  await page.goto('/');
-  const menu = page.getByRole('button', { name: 'Menu' });
-  const newGame = page.getByRole('button', { name: 'Nieuw spel' });
-  await expect(menu.or(newGame)).toBeVisible();
-  if (await menu.isVisible()) {
-    await menu.click();
-    await page.getByRole('button', { name: 'Stop spel' }).click();
-    await page.getByRole('button', { name: 'Ja, stoppen' }).click();
-  }
-  await newGame.click();
-  await expect(page.getByRole('heading', { name: 'Wie doen er mee?' })).toBeVisible();
-}
 
 async function startGame(page: Page, names: string[]) {
   await openSetup(page);

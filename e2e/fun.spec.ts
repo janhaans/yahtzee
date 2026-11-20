@@ -1,16 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-
-/** Opens the start screen with no game running. */
-async function openStart(page: Page) {
-  await page.goto('/');
-  const menu = page.getByRole('button', { name: 'Menu' });
-  await expect(menu.or(page.getByRole('button', { name: 'Nieuw spel' }))).toBeVisible();
-  if (await menu.isVisible()) {
-    await menu.click();
-    await page.getByRole('button', { name: 'Stop spel' }).click();
-    await page.getByRole('button', { name: 'Ja, stoppen' }).click();
-  }
-}
+import { openStart } from './helpers';
 
 async function startGame(page: Page, theme: string, names: string[]) {
   await openStart(page);

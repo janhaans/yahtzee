@@ -11,6 +11,7 @@ import type {
 } from './protocol.js';
 import { registerHistoryRoutes } from './history/routes.js';
 import type { HistoryStore } from './history/store.js';
+import { Lobby } from './lobby.js';
 import { TABLE, type Actor, type GameRoom } from './room.js';
 
 const WEB_DIST = fileURLToPath(new URL('../../web/dist', import.meta.url));
@@ -30,6 +31,7 @@ export interface App {
   readonly fastify: FastifyInstance;
   readonly io: GameServer;
   readonly room: GameRoom;
+  readonly lobby: Lobby;
 }
 
 const MAX_TOKEN_LENGTH = 100;
@@ -74,6 +76,7 @@ export async function buildApp(options: {
   serveWeb: boolean;
 }): Promise<App> {
   const { room } = options;
+  const lobby = new Lobby(room);
   const fastify = Fastify({ logger: { level: 'warn' } });
   registerHistoryRoutes(fastify, options.history);
 
@@ -100,9 +103,12 @@ export async function buildApp(options: {
   });
   type Target = Pick<GameServer, 'emit'>;
   const sendYou = (socket: GameSocket) => {
-    if (!socket.data.table) socket.emit('seat:you', room.playerFor(socket.data.token));
+    if (socket.data.table) return;
+    const token = socket.data.token;
+    socket.emit('seat:you', lobby.playerFor(token) ?? room.playerFor(token));
   };
   const sendAll = (target: Target) => {
+    target.emit('lobby:state', lobby.state);
     target.emit('game:theme', room.theme);
     target.emit('game:seats', room.seats);
     target.emit('game:state', room.state);
@@ -155,12 +161,28 @@ export async function buildApp(options: {
         ? (payload as Record<string, unknown>)[key]
         : undefined;
 
-    socket.on('game:create', (payload, ack) =>
-      handle(
-        ack,
-        tableOnly(() => room.create(payload)),
-      ),
+    socket.on('lobby:open', (payload, ack) =>
+      handle(ack, () => lobby.open(actor(), field(payload, 'theme'))),
     );
+    socket.on('lobby:close', (ack) => handle(ack, () => lobby.close(actor())));
+    socket.on('lobby:add', (ack) => handle(ack, () => lobby.add(actor())));
+    socket.on('lobby:update', (payload, ack) =>
+      handle(ack, () => lobby.update(actor(), field(payload, 'id'), field(payload, 'change'))),
+    );
+    socket.on('lobby:remove', (payload, ack) =>
+      handle(ack, () => lobby.remove(actor(), field(payload, 'id'))),
+    );
+    socket.on('lobby:reorder', (payload, ack) =>
+      handle(ack, () => lobby.reorder(actor(), field(payload, 'ids'))),
+    );
+    socket.on('lobby:join', (payload, ack) =>
+      handle(ack, () => {
+        const result = lobby.join(actor(), payload);
+        if (result.ok) useToken(result.token);
+        return result;
+      }),
+    );
+    socket.on('lobby:start', (ack) => handle(ack, () => lobby.start(actor())));
     socket.on('game:roll', (ack) => handle(ack, () => room.roll(actor())));
     socket.on('game:toggleHold', (payload, ack) =>
       handle(ack, () => room.toggleHold(field(payload, 'index'), actor())),
@@ -208,5 +230,5 @@ export async function buildApp(options: {
     );
   });
 
-  return { fastify, io, room };
+  return { fastify, io, room, lobby };
 }

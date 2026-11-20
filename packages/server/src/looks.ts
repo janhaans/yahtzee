@@ -41,6 +41,22 @@ export const COLOURS = [
 ] as const;
 export type Colour = (typeof COLOURS)[number];
 
+/** The avatars each new player starts with, so the first players match the theme. */
+const THEME_AVATARS: Record<ThemeId, readonly AvatarId[]> = {
+  voetbal: ['football', 'glove', 'trophy', 'shirt'],
+  snoep: ['cupcake', 'lollipop', 'donut', 'icecream'],
+};
+
+export function defaultAvatar(theme: ThemeId, seat: number): AvatarId {
+  const avatars = THEME_AVATARS[theme];
+  return avatars[seat % avatars.length]!;
+}
+
+/** The first colour nobody has picked yet. */
+export function freeColour(taken: readonly string[]): Colour {
+  return COLOURS.find((colour) => !taken.includes(colour)) ?? COLOURS[0];
+}
+
 export function isTheme(value: unknown): value is ThemeId {
   return typeof value === 'string' && (THEMES as readonly string[]).includes(value);
 }
