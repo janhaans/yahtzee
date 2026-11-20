@@ -112,7 +112,14 @@ export function useConnection(
     socket.on('game:unfinished', setUnfinished);
     socket.on('history:saveFailed', setSaveFailed);
     socket.connect();
+    // A phone that wakes up from a locked screen reconnects at once, instead of waiting for
+    // the next retry.
+    const wake = () => {
+      if (document.visibilityState === 'visible' && !socket.connected) socket.connect();
+    };
+    document.addEventListener('visibilitychange', wake);
     return () => {
+      document.removeEventListener('visibilitychange', wake);
       socket.removeAllListeners();
       socket.disconnect();
     };

@@ -312,6 +312,51 @@ describe('GameScreen with phones', () => {
     expect(screen.getByRole('list', { name: 'Stand' })).toHaveTextContent('Emma');
   });
 
+  it('waits for a phone that lost its connection, then lets the laptop take over', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+    vi.setSystemTime(new Date('2026-11-20T18:00:00Z'));
+    const actions = fakeActions();
+    const gone: SeatInfo = {
+      ...seat('b', 'phone'),
+      online: false,
+      offlineSince: '2026-11-20T18:00:00.000Z',
+    };
+    render(<GameScreen state={sarasTurn()} actions={actions} seats={[mixed[0]!, gone]} />);
+    expect(screen.getByText('Sara speelt op de telefoon 📱')).toBeVisible();
+    expect(screen.getByRole('img', { name: 'telefoon even weg' })).toBeVisible();
+
+    act(() => vi.advanceTimersByTime(3000));
+    expect(screen.getByText(/^Wachten op Sara\.\.\./)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Speel deze beurt op de laptop' })).toBeNull();
+
+    act(() => vi.advanceTimersByTime(12_000));
+    const takeOver = screen.getByRole('button', { name: 'Speel deze beurt op de laptop' });
+    vi.useRealTimers();
+    await userEvent.click(takeOver);
+    expect(actions.takeOver).toHaveBeenCalled();
+  });
+
+  it('also shows the wait on other phones, but never the take-over button', () => {
+    vi.useFakeTimers({ shouldAdvanceTime: false });
+    vi.setSystemTime(new Date('2026-11-20T18:01:00Z'));
+    const gone: SeatInfo = {
+      ...seat('b', 'phone'),
+      online: false,
+      offlineSince: '2026-11-20T18:00:00.000Z',
+    };
+    render(
+      <GameScreen
+        state={sarasTurn()}
+        actions={fakeActions()}
+        seats={[seat('a', 'phone'), gone]}
+        me="a"
+      />,
+    );
+    expect(screen.getByText(/^Wachten op Sara\.\.\./)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Speel deze beurt op de laptop' })).toBeNull();
+    vi.useRealTimers();
+  });
+
   it('shows on the laptop that a phone player is playing, until the laptop takes over', () => {
     const { rerender } = render(
       <GameScreen state={sarasTurn()} actions={fakeActions()} seats={mixed} />,

@@ -3,9 +3,11 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { LobbyPlayer, LobbyState } from '@yahtzee/server/protocol';
+import { createGame, type GameState } from '@yahtzee/game-logic';
+import type { LobbyPlayer, LobbyState, SeatInfo } from '@yahtzee/server/protocol';
 import { JoinForm } from '../src/phone/JoinForm';
 import { WaitingRoom } from '../src/phone/WaitingRoom';
+import { WhoAreYou } from '../src/phone/WhoAreYou';
 import { readProfile, readSeatToken, writeProfile, writeSeatToken } from '../src/settings';
 
 afterEach(() => {
@@ -111,6 +113,42 @@ describe('WaitingRoom', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Plaatje of kleur veranderen' }));
     await userEvent.click(screen.getByRole('button', { name: 'Oranje' }));
     expect(screen.getByRole('alert')).toHaveTextContent('dezelfde kleur');
+  });
+});
+
+describe('WhoAreYou', () => {
+  const state = (): GameState => {
+    const result = createGame([
+      { id: 'a', name: 'Emma', avatar: 'cat', colour: '#e8457c', type: 'human' },
+      { id: 'b', name: 'Sara', avatar: 'fox', colour: '#2e8b57', type: 'human' },
+      { id: 'c', name: 'Noor', avatar: 'dog', colour: '#7b4fd6', type: 'human' },
+    ]);
+    if (!result.ok) throw new Error(result.error);
+    return result.state;
+  };
+  const seats: SeatInfo[] = [
+    { playerId: 'a', controller: 'table', online: true, offlineSince: null, takenOver: false },
+    { playerId: 'b', controller: 'phone', online: true, offlineSince: null, takenOver: false },
+    { playerId: 'c', controller: 'phone', online: false, offlineSince: 'x', takenOver: false },
+  ];
+
+  it('offers laptop players and players whose phone is gone, not those still playing', async () => {
+    const onClaim = vi.fn(joined);
+    render(<WhoAreYou state={state()} seats={seats} onClaim={onClaim} />);
+    expect(screen.getByRole('heading', { name: 'Wie ben jij?' })).toBeVisible();
+    expect(screen.getByRole('button', { name: /Emma.*nu op de laptop/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Sara.*speelt al/ })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: /Noor.*telefoon even weg/ }));
+    expect(onClaim).toHaveBeenCalledWith('c');
+  });
+
+  it('says so when someone else was just faster', async () => {
+    const onClaim = vi.fn(() =>
+      Promise.resolve({ ok: false as const, error: 'seat_taken' as const }),
+    );
+    render(<WhoAreYou state={state()} seats={seats} onClaim={onClaim} />);
+    await userEvent.click(screen.getByRole('button', { name: /Emma/ }));
+    expect(screen.getByRole('alert')).toHaveTextContent('andere telefoon');
   });
 });
 

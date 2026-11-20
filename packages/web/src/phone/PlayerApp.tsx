@@ -11,6 +11,7 @@ import { useDeviceSound } from '../sound/useDeviceSound';
 import { useConnection } from '../useGame';
 import { JoinForm } from './JoinForm';
 import { WaitingRoom } from './WaitingRoom';
+import { WhoAreYou } from './WhoAreYou';
 
 /** A phone sends its seat token on every (re)connect, so it gets its player back. */
 const phoneHello = (): Hello => ({ role: 'phone', token: readSeatToken() });
@@ -91,11 +92,7 @@ export function PlayerApp() {
       </>
     );
   } else if (state?.status === 'in_progress') {
-    screen = (
-      <section className="card phone-card">
-        <p>{nl.phone.gameRunning}</p>
-      </section>
-    );
+    screen = <WhoAreYou state={state} seats={seats} onClaim={lobbyActions.claim} />;
   } else {
     screen = (
       <section className="card phone-card">

@@ -11,7 +11,7 @@ import { DEFAULT_THEME, type ThemeId } from '@yahtzee/server/looks';
 import { avatarEmoji } from '../avatars';
 import { nl } from '../i18n/nl';
 import { reducedMotion } from '../motion';
-import type { SeatInfo } from '@yahtzee/server/protocol';
+import { TAKE_OVER_AFTER_MS, type SeatInfo } from '@yahtzee/server/protocol';
 import type { ClientResult, GameActions } from '../useGame';
 import { Dice } from './Dice';
 import { Dialog } from './Dialog';
@@ -69,6 +69,11 @@ export function GameScreen({
   const cardIndex = onPhone && !canPlay ? state.players.findIndex((p) => p.id === me) : -1;
   const cardPlayer = state.players[cardIndex] ?? player;
   const card = state.scorecards[cardIndex] ?? state.scorecards[state.currentPlayerIndex]!;
+  // A phone that lost its connection on its turn: everyone waits, then the laptop may play.
+  const offlineSince = seat && !seat.online && !seat.takenOver ? seat.offlineSince : null;
+  const offlineFor = useTimeSince(offlineSince);
+  const waiting = offlineFor !== null && offlineFor >= WAIT_NOTICE_MS;
+  const mayTakeOver = !onPhone && offlineFor !== null && offlineFor >= TAKE_OVER_AFTER_MS;
   const rollsLeft = MAX_ROLLS - state.rollsUsed;
   const rollId = `${state.round}-${state.currentPlayerIndex}-${state.rollsUsed}`;
   const turnId = `${state.round}-${state.currentPlayerIndex}`;
@@ -86,15 +91,17 @@ export function GameScreen({
     await run(() => actions.chooseBox(box));
   };
 
-  const status = !canPlay
-    ? onPhone
-      ? nl.phone.waitTurn
-      : nl.game.onPhone(player.name)
-    : !state.dice
-      ? nl.game.rollFirst
-      : rollsLeft > 0
-        ? `${nl.game.rollOf(state.rollsUsed, MAX_ROLLS)} · ${nl.game.holdHint}`
-        : nl.game.chooseBoxHint;
+  const status = waiting
+    ? nl.game.waitingFor(player.name)
+    : !canPlay
+      ? onPhone
+        ? nl.phone.waitTurn
+        : nl.game.onPhone(player.name)
+      : !state.dice
+        ? nl.game.rollFirst
+        : rollsLeft > 0
+          ? `${nl.game.rollOf(state.rollsUsed, MAX_ROLLS)} · ${nl.game.holdHint}`
+          : nl.game.chooseBoxHint;
   const heading = (name: string) =>
     onPhone && canPlay ? nl.phone.yourTurn(name) : nl.game.turn(name);
 
@@ -119,7 +126,11 @@ export function GameScreen({
               </span>
               <span className="name">{p.name}</span>
               {seats[i]?.controller === 'phone' && (
-                <span className="on-phone" role="img" aria-label={nl.game.phonePlayer}>
+                <span
+                  className={seats[i]!.online ? 'on-phone' : 'on-phone offline'}
+                  role="img"
+                  aria-label={seats[i]!.online ? nl.game.phonePlayer : nl.game.phoneGone}
+                >
                   📱
                 </span>
               )}
@@ -184,6 +195,15 @@ export function GameScreen({
             <p className="error" role="alert">
               {error}
             </p>
+          )}
+          {mayTakeOver && (
+            <button
+              type="button"
+              className="button big roll-button"
+              onClick={() => run(actions.takeOver)}
+            >
+              {nl.game.takeOver}
+            </button>
           )}
           {canPlay && (
             <button
@@ -294,6 +314,21 @@ export function GameScreen({
       )}
     </main>
   );
+}
+
+/** A short hiccup is not worth a message; after this long everyone sees "Wachten op...". */
+const WAIT_NOTICE_MS = 3000;
+
+/** Milliseconds since `since` (ISO time), counted every second; null without a time. */
+function useTimeSince(since: string | null): number | null {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (since === null) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [since]);
+  return since === null ? null : Math.max(0, now - Date.parse(since));
 }
 
 /** How long the old player's name stays to fade out on a turn change. */
